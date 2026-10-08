@@ -1,10 +1,10 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
+import {CRIMSON} from './channelStyle';
 
 const lowerCopy = 'Balfour Declaration';
 const yearCopy = '1917';
-const RED = '#aa1533'; // same crimson as the year tag (user request 2026-10-07)
 const WHITE = '#fffdf7';
 
 // Measured from the supplied 30fps reference. Some pairs intentionally begin
@@ -77,7 +77,7 @@ export const BalfourTag:React.FC<DocumentaryTypeOnLabelProps> = ({
     {labelCharacters.length > 0 ? <div style={{
       position:'absolute', left:'50%', top:858, height:115,
       display:'inline-flex', alignItems:'center', overflow:'hidden', whiteSpace:'pre',
-      color:WHITE, backgroundColor:RED, borderRadius:8,
+      color:WHITE, backgroundColor:CRIMSON, borderRadius:8, // same crimson as the year tag (user request 2026-10-07)
       boxSizing:'border-box', padding:'0 30px',
       fontFamily:'Arial, Helvetica, sans-serif', fontWeight:700, fontSize:72,
       letterSpacing:4.7, lineHeight:1, transform:'translateX(-50%)',
@@ -88,7 +88,7 @@ export const BalfourTag:React.FC<DocumentaryTypeOnLabelProps> = ({
     {yearCharacters.length > 0 ? <div style={{
       position:'absolute', right:177, top:100, height:115,
       display:'inline-flex', alignItems:'center', justifyContent:'flex-end', overflow:'hidden', whiteSpace:'pre',
-      color:WHITE, backgroundColor:'#aa1533', borderRadius:8,
+      color:WHITE, backgroundColor:CRIMSON, borderRadius:8,
       boxSizing:'border-box', padding:'0 34px',
       fontFamily:'Arial, Helvetica, sans-serif', fontWeight:700, fontSize:68,
       letterSpacing:-1.5, lineHeight:1,

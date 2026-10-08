@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
+import {CRIMSON} from './channelStyle';
 
 export type PortraitYearTagProps = {
   background?: string;
@@ -47,7 +48,7 @@ export const PortraitYearTag: React.FC<PortraitYearTagProps> = ({
     {characters.length > 0 ? <div style={{
       position: 'absolute', right: 170, top: 95, height: 120,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden', whiteSpace: 'pre',
-      color: '#fffdf7', backgroundColor: '#aa1533', borderRadius: 8,
+      color: '#fffdf7', backgroundColor: CRIMSON, borderRadius: 8,
       boxSizing: 'border-box', padding: '0 34px',
       fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 700, fontSize: 68,
       letterSpacing: -1.5, lineHeight: 1,

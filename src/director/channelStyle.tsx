@@ -5,9 +5,25 @@ import {AbsoluteFill, Easing, Img, interpolate, staticFile} from 'remotion';
  * Channel style tokens. The look stays deliberately plain (Arial, flat red bars, graph paper, real photos):
  * the polish is in spacing, easing and consistency, not in effects.
  */
-export const RED = '#aa1533'; // bars only (title, name, year bars, comparison bars)
-export const TEXT_RED = '#c8130b'; // red text: headings, numbers, emphasised words (brighter, reads on photos)
-export const CRIMSON = '#aa1533'; // year tags only
+// Accent colours. These defaults are the channel's own; a job can carry a channel theme (applyTheme) that replaces them.
+// They are `let` on purpose: every template reads them at render time, so one call re-themes the whole video.
+export let RED = '#aa1533'; // bars only (title, name, year bars, comparison bars)
+export let TEXT_RED = '#c8130b'; // red text: headings, numbers, emphasised words (brighter, reads on photos)
+export let CRIMSON = '#aa1533'; // year tags only
+export const DEFAULT_THEME = {bar: '#aa1533', text: '#c8130b'};
+export type Theme = {bar?: string; text?: string};
+const HEX = /^#[0-9a-fA-F]{6}$/;
+let customText: [number, number, number] | null = null;
+export const applyTheme = (theme?: Theme | null) => {
+  const bar = theme?.bar && HEX.test(theme.bar) ? theme.bar : DEFAULT_THEME.bar;
+  const text = theme?.text && HEX.test(theme.text) ? theme.text : DEFAULT_THEME.text;
+  RED = bar;
+  CRIMSON = bar;
+  TEXT_RED = text;
+  customText = text.toLowerCase() === DEFAULT_THEME.text ? null : [1, 3, 5].map((k) => parseInt(text.slice(k, k + 2), 16)) as [number, number, number];
+};
+/** A template's own highlight shade (e.g. T11's brighter red) unless the channel sets its own text colour. */
+export const highlightRGB = (own: [number, number, number]): [number, number, number] => customText ?? own;
 export const CREAM = '#fffaf2';
 export const INK = '#17150f';
 export const FONT = 'Arial, Helvetica, sans-serif';
