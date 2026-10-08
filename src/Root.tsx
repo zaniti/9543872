@@ -8,6 +8,7 @@ import type {AvatarPlan} from './types';
 import type {ScenesData} from './news/types';
 import type {ArchiveData} from './archive/types';
 import type {CartoonData} from './cartoon/types';
+import {DirectorJob, directorMetadata} from './director/DirectorJob';
 
 const fallbackAvatar: AvatarPlan = {
   title: 'Avatar Tax',
@@ -184,6 +185,17 @@ export const Root = () => {
         width={cartoonData.width || 1920}
         height={cartoonData.height || 1080}
         defaultProps={{data: cartoonData}}
+      />
+      {/* History director (Studio): the edit and its media come from director_edit.json in the package. */}
+      <Composition
+        id="DirectorJob"
+        component={DirectorJob}
+        calculateMetadata={directorMetadata}
+        durationInFrames={30}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{}}
       />
     </>
   );

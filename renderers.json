@@ -18,5 +18,10 @@
     "marker": "cartoon.json",
     "composition": "CartoonExplainer",
     "description": "Cartoon explainer packages from Cartoon Factory"
+  },
+  "history-director": {
+    "marker": "director_edit.json",
+    "composition": "DirectorJob",
+    "description": "History director packages from the Factory's Studio tab"
   }
 }
