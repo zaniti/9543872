@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {tagCharacterOpacity, tagCharacterRise, tagCharacterStart} from './documentaryMotion';
-import {FONT, TEXT_RED as RED, easeOut} from './channelStyle';
+import {FONT, TEXT_RED as RED, easeOut, paperFilter, paperFor, paperVeil} from './channelStyle';
 
 export type RelationshipPolaroidsProps={paper?:string; first?:string; second?:string; firstName?:string; secondName?:string; sourceNote?:string; revealShift?:number; firstPosition?:string; secondPosition?:string};
 
@@ -19,7 +19,7 @@ export const RelationshipPolaroids:React.FC<RelationshipPolaroidsProps>=({
  const arrowP=interpolate(f,[34,54],[0,1],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
  const secondP=easeOut(f,46,70);
  return <AbsoluteFill style={{overflow:'hidden',background:'#e1e1d2'}}>
-  <Img src={staticFile(paper)} style={{width:'100%',height:'100%',objectFit:'cover',filter:'brightness(1.08) saturate(.62)'}}/><div style={{position:'absolute',inset:0,background:'rgba(248,245,226,.45)'}}/>
+  <Img src={staticFile(paperFor(paper))} style={{width:'100%',height:'100%',objectFit:'cover',filter:paperFilter('brightness(1.08) saturate(.62)')}}/><div style={{position:'absolute',inset:0,background:paperVeil('rgba(248,245,226,.45)')}}/>
   <div style={{position:'absolute',top:40,right:74,color:'#faf7eb',font: '700 22px Arial',opacity:interpolate(f,[25,38],[0,.82],{extrapolateLeft:'clamp',extrapolateRight:'clamp'})}}>{sourceNote}</div>
   <Print src={first} name={firstName} x={280} y={100} width={464} height={670} imageHeight={584} progress={firstP} frame={f} nameStart={34} pos={firstPosition}/>
   <svg width="650" height="370" viewBox="0 0 650 370" style={{position:'absolute',left:720,top:55,overflow:'visible'}}>

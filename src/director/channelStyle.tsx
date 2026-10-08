@@ -11,7 +11,7 @@ export let RED = '#aa1533'; // bars only (title, name, year bars, comparison bar
 export let TEXT_RED = '#c8130b'; // red text: headings, numbers, emphasised words (brighter, reads on photos)
 export let CRIMSON = '#aa1533'; // year tags only
 export const DEFAULT_THEME = {bar: '#aa1533', text: '#c8130b'};
-export type Theme = {bar?: string; text?: string};
+export type Theme = {bar?: string; text?: string; paper?: string};
 const HEX = /^#[0-9a-fA-F]{6}$/;
 let customText: [number, number, number] | null = null;
 export const applyTheme = (theme?: Theme | null) => {
@@ -21,13 +21,25 @@ export const applyTheme = (theme?: Theme | null) => {
   CRIMSON = bar;
   TEXT_RED = text;
   customText = text.toLowerCase() === DEFAULT_THEME.text ? null : [1, 3, 5].map((k) => parseInt(text.slice(k, k + 2), 16)) as [number, number, number];
+  // the channel's paper (a built-in under templates/papers/ or the job's own uploaded paper.jpg); none = squared paper
+  const paper = theme?.paper && /^(templates\/papers\/[a-z]+\.jpg|jobs\/[^/]+\/paper\.jpg)$/.test(theme.paper) ? theme.paper : '';
+  PAPER = paper || GRID_PAPER;
+  PAPER_CUSTOM = Boolean(paper);
 };
+/** The paper a template shows: its own squared-paper scan by default, the channel's paper when one is chosen. */
+export const paperFor = (own: string) => (PAPER_CUSTOM ? PAPER : own);
+/** The squared paper's own look; a chosen paper gets a gentler version (a little less colour and texture, a light veil)
+ * so dark text stays readable and every paper sits in the same family. */
+export const paperFilter = (own: string) => (PAPER_CUSTOM ? 'saturate(.8) contrast(.86) brightness(1.04)' : own);
+export const paperVeil = (own: string) => (PAPER_CUSTOM ? 'rgba(250,247,238,.26)' : own);
 /** A template's own highlight shade (e.g. T11's brighter red) unless the channel sets its own text colour. */
 export const highlightRGB = (own: [number, number, number]): [number, number, number] => customText ?? own;
 export const CREAM = '#fffaf2';
 export const INK = '#17150f';
 export const FONT = 'Arial, Helvetica, sans-serif';
-export const PAPER = 'templates/clip6/paper-grid.jpg';
+export const GRID_PAPER = 'templates/clip6/paper-grid.jpg';
+export let PAPER = GRID_PAPER;
+export let PAPER_CUSTOM = false;
 
 export const clamp = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
 export const easeOut = (frame: number, from: number, to: number) =>
@@ -38,10 +50,10 @@ export const easeInOut = (frame: number, from: number, to: number) =>
 export const textBase: React.CSSProperties = {fontFamily: FONT, textRendering: 'geometricPrecision', WebkitFontSmoothing: 'antialiased'};
 
 /** Graph-paper ground shared by the paper templates, with the same slow drift every paper template has. */
-export const PaperGround: React.FC<{frame: number; paper?: string}> = ({frame, paper = PAPER}) => (
+export const PaperGround: React.FC<{frame: number; paper?: string}> = ({frame, paper}) => (
   <AbsoluteFill style={{transform: `scale(${1.02 + Math.max(0, frame) * 0.00012})`}}>
-    <Img src={staticFile(paper)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(1.09) saturate(.58)'}} />
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(247,243,223,.42)'}} />
+    <Img src={staticFile(paper ?? PAPER)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: paperFilter('brightness(1.09) saturate(.58)')}} />
+    <div style={{position: 'absolute', inset: 0, background: paperVeil('rgba(247,243,223,.42)')}} />
   </AbsoluteFill>
 );
 

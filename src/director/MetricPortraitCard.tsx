@@ -1,5 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {paperFilter, paperFor, paperVeil} from './channelStyle';
 
 export type MetricPortraitCardProps = {
   paper?: string;
@@ -60,8 +61,8 @@ export const MetricPortraitCard:React.FC<MetricPortraitCardProps> = ({
   const portraitIn=reveal(frame,9,16);
   const settledZoom=interpolate(frame,[Math.round(zoomDurationFrames*.7),zoomDurationFrames],[1,1.018],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
   return <AbsoluteFill style={{overflow:'hidden',background:'#e7e7d9',transform:`scale(${settledZoom})`,transformOrigin:'center center'}}>
-    <Img src={staticFile(paper)} style={{width:'100%',height:'100%',objectFit:'cover',filter:'brightness(1.1) saturate(.58)'}} />
-    <div style={{position:'absolute',inset:0,background:'rgba(247,243,223,.42)'}} />
+    <Img src={staticFile(paperFor(paper))} style={{width:'100%',height:'100%',objectFit:'cover',filter:paperFilter('brightness(1.1) saturate(.58)')}} />
+    <div style={{position:'absolute',inset:0,background:paperVeil('rgba(247,243,223,.42)')}} />
     <div style={{position:'absolute',left:150,top:180,width:480,height:725,overflow:'hidden',opacity:portraitIn,transform:`translateY(${(1-portraitIn)*70}px) scale(${.95+.05*portraitIn})`,boxShadow:'0 12px 22px rgba(0,0,0,.22)',background:'#f8f4e8'}}>
       <Img src={staticFile(portrait)} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:portraitPosition}} />
     </div>
