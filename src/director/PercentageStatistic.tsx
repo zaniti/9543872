@@ -8,8 +8,8 @@ import {CREAM, FONT, TEXT_RED, RiseWords, clamp, easeOut} from './channelStyle';
  * red with a slow left-to-right sweep, like a highlighter. Important words: wrap them in *stars* in `copy`.
  * "calm": number red + line white, fade only. "count": the original count-up with the word-by-word line. */
 const sweep = (p: number): React.CSSProperties => ({
-  // white text whose colour fills with red from left to right as p goes 0 -> 1 (soft 8% edge)
-  backgroundImage: `linear-gradient(90deg, ${TEXT_RED} ${p * 108 - 8}%, ${CREAM} ${p * 108}%)`,
+  // white text whose colour fills with red from left to right as p goes 0 -> 1
+  backgroundImage: `linear-gradient(90deg, ${TEXT_RED} ${p * 100}%, ${CREAM} ${p * 100}%)`, // hard edge, like a marker
   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent',
 });
 const HighlightCopy: React.FC<{copy: string; f: number; start: number}> = ({copy, f, start}) => {
