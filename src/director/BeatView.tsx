@@ -14,7 +14,8 @@ import {StatementOverlay} from './StatementOverlay';
 import {StatisticOverlay} from './StatisticOverlay';
 import {TwoPhotoHeading} from './TwoPhotoHeading';
 import {CompareBars, TimelineStrip, type CompareRow, type TimelineEvent} from './NewTemplates';
-import {DocumentMark, MapCircle, NumberCard, SentenceMarker, StatementPaper} from './VariantTemplates';
+import {DocumentMark, MapCircle, PhotoBurst, SentenceMarker, StatementPaper} from './VariantTemplates';
+import {DocumentPair, MapPair, PaperPrints, PhotoLabels, SourceCard} from './OriginalTemplates';
 
 export type Beat = ClaudeFuggerBeat & {revealShift?: number};
 const gridPaper = 'templates/clip6/paper-grid.jpg';
@@ -55,10 +56,16 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T22': return <StatementOverlay background={a.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
     // second designs and new kinds: background = a photo or a film clip (bgfilm); the map / document is the last card
     case 'T22b': return <StatementPaper background={a.src} backgroundVideo={a.videoParts?.[0]?.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T14b': return <NumberCard photo={a.src} photoPosition={a.objectPosition} percent={Number(t.percent)} prefix={s('prefix')} suffix={s('suffix')} copy={s('copy')} revealShift={shift} />;
     case 'T11b': return <SentenceMarker background={a.src} backgroundVideo={a.videoParts?.[0]?.src} sentence={s('sentence')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T26': return <MapCircle background={a.src} backgroundVideo={a.videoParts?.[0]?.src} map={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} label={s('label')} backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T27': return <DocumentMark background={a.src} backgroundVideo={a.videoParts?.[0]?.src} doc={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T27': return <DocumentMark background={a.src} backgroundVideo={a.videoParts?.[0]?.src} doc={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} marker={beat.data?.marker as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
+    // the owner's reference templates 4, 12, 13, 15, 17, 20: every picture is a card (documents and maps pre-trimmed)
+    case 'T4': return <PaperPrints photos={beat.assets.map((x) => x.src)} positions={beat.assets.map((x) => x.objectPosition)} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T12': return <DocumentPair first={a.src} second={b.src} aspectA={a.aspectRatio} aspectB={b.aspectRatio} revealShift={shift} />;
+    case 'T13': return <SourceCard background={a.src} backgroundVideo={a.videoParts?.[0]?.src} backgroundPosition={bgPos} doc={b.src} aspect={b.aspectRatio} revealShift={shift} />;
+    case 'T15': return <PhotoBurst photos={beat.assets.map((x) => x.src)} positions={beat.assets.map((x) => x.objectPosition)} durationFrames={beat.durationFrames} />;
+    case 'T17': return <MapPair first={a.src} second={b.src} aspectA={a.aspectRatio} aspectB={b.aspectRatio} caption={s('caption')} revealShift={shift} />;
+    case 'T20': return <PhotoLabels first={a.src} second={b?.src} firstPosition={a.objectPosition} secondPosition={b?.objectPosition} labelA={s('labelA')} labelB={s('labelB')} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T24': return <TimelineStrip heading={s('heading')} events={(beat.data?.events ?? []) as TimelineEvent[]} revealShift={shift} />;
     case 'T25': return <CompareBars heading={s('heading')} rows={(beat.data?.rows ?? []) as CompareRow[]} prefix={s('prefix')} suffix={s('suffix')} note={s('note') || undefined} revealShift={shift} />;
     case 'video': return <EngineClips beat={beat} />;

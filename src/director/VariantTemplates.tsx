@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, OffthreadVideo, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CREAM, INK, PaperGround, RED, TEXT_RED, clamp, easeInOut, easeOut, textBase} from './channelStyle';
+import {CREAM, INK, RED, TEXT_RED, clamp, easeInOut, easeOut, textBase} from './channelStyle';
 
 /**
  * Second designs for the most used jobs (statement, number, sentence, place) and two new kinds (map, document).
@@ -82,35 +82,6 @@ export const StatementPaper: React.FC<Bg & {statement: string}> = ({background, 
         {f < done ? <PopLetters text={statement} frame={f} start={18} keyColor="#fff9ed" /> : <SweepKeys text={statement} frame={f} start={done} base="#fff9ed" />}
       </div>
     </AbsoluteFill>
-  </AbsoluteFill>;
-};
-
-// ------------------------------------------------------------------ T14b: number on paper next to a taped photo
-
-export const NumberCard: React.FC<{photo: string; photoPosition?: string; percent: number; prefix?: string; suffix?: string; copy: string; revealShift?: number}> = ({photo, photoPosition = '50% 50%', percent, prefix = '', suffix = '', copy, revealShift = 0}) => {
-  const clock = useCurrentFrame();
-  const f = clock - revealShift;
-  const card = easeOut(f, 0, 16);
-  const num = easeOut(f, 12, 26);
-  const copyIn = easeOut(f, 22, 36);
-  return <AbsoluteFill style={{overflow: 'hidden'}}>
-    <PaperGround frame={clock} />
-    <div style={{position: 'absolute', left: 200, top: 220, width: 560, height: 640, background: '#fbf8ef', padding: '24px 24px 84px', boxSizing: 'border-box',
-      boxShadow: '0 16px 36px rgba(0,0,0,.26)', opacity: card, transform: `translateY(${(1 - card) * 40}px)`}}>
-      <div style={{width: '100%', height: '100%', overflow: 'hidden', background: '#222'}}>
-        <Img src={staticFile(photo)} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: photoPosition, filter: 'saturate(.85)'}} />
-      </div>
-      <Tape style={{left: 200, top: -20}} rotate={-2} width={160} />
-    </div>
-    <div style={{position: 'absolute', left: 870, right: 120, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
-      <div style={{...textBase, color: '#151515', fontWeight: 700, fontSize: 124, lineHeight: 1, letterSpacing: -3, opacity: num, transform: `translateY(${(1 - num) * 12}px)`}}>
-        <SweepKeys text={`*${prefix}${Math.round(percent).toLocaleString('en-US')}${suffix}*`} frame={f} start={30} base="#151515" />
-      </div>
-      <div style={{marginTop: 22, ...textBase, color: '#151515', fontWeight: 700, fontSize: 54, lineHeight: 1.16, letterSpacing: -0.5,
-        opacity: copyIn, transform: `translateY(${(1 - copyIn) * 10}px)`}}>
-        <SweepKeys text={copy} frame={f} start={80} base="#151515" />
-      </div>
-    </div>
   </AbsoluteFill>;
 };
 
@@ -199,8 +170,10 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
       <div style={{position: 'relative', width: w, height: h, opacity: card, boxShadow: '0 22px 50px rgba(0,0,0,.5)',
         transform: `translateY(${(1 - card) * 34}px) rotate(.6deg) scale(${push})`, transformOrigin: `${x}% ${y}%`}}>
         <Img src={staticFile(map)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(.88) sepia(.1)'}} />
-        <Tape style={{left: -40, top: -12}} rotate={-28} />
-        <Tape style={{right: -40, bottom: -12}} rotate={-28} />
+        {/* tape on the two corners farther from the circle */}
+        {(x < 35 && y < 35) || (x > 65 && y > 65)
+          ? <><Tape style={{right: -40, top: -12}} rotate={28} /><Tape style={{left: -40, bottom: -12}} rotate={28} /></>
+          : <><Tape style={{left: -40, top: -12}} rotate={-28} /><Tape style={{right: -40, bottom: -12}} rotate={-28} /></>}
         <svg width={w} height={h} style={{position: 'absolute', inset: 0, overflow: 'visible'}}>
           <path d={handCircle(cx, cy, rx, ry)} fill="none" stroke={RED} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round"
             pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} style={{filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.25))'}} />
@@ -216,30 +189,44 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
 // ------------------------------------------------------------------ T27: document over a photo or film, one line highlighted
 
 /** `box` = the line to highlight, in percent [left, top, width, height] of the page (found by OCR). */
-export const DocumentMark: React.FC<Bg & {doc: string; aspect: number; box: [number, number, number, number]}> = ({background, backgroundVideo, doc, aspect, box, backgroundPosition = '50% 50%', revealShift = 0}) => {
+export const DocumentMark: React.FC<Bg & {doc: string; aspect: number; box: [number, number, number, number]; marker?: string}> = ({background, backgroundVideo, doc, aspect, box, marker = '#ffe14d', backgroundPosition = '50% 50%', revealShift = 0}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const [bx, by, bw, bh] = box;
   const {w, h} = fit(aspect, 1400, 860);
   const card = easeOut(f, 2, 16);
   const travel = easeInOut(f, 10, 48);
-  // move in until the marked line fills about 60% of the frame width (between 1.4x and 4x), so it can be read
-  const target = Math.min(4, Math.max(1.4, (0.6 * 1920) / Math.max(1, (bw / 100) * w)));
+  // move in until the marked line is readable: about 60% of the frame wide, or at least 46 px tall for a short line,
+  // never wider than the frame (between 1.4x and 7x)
+  const lineW = Math.max(1, (bw / 100) * w), lineH = Math.max(1, (bh / 100) * h);
+  const target = Math.min(7, (0.92 * 1920) / lineW, Math.max(1.4, (0.6 * 1920) / lineW, 46 / lineH));
   const zoom = 1 + (target - 1) * travel + Math.max(0, clock) * 0.0006;
   const mark = interpolate(f, [46, 68], [0, 1], {...clamp, easing: Easing.inOut(Easing.sin)});
   const ox = bx + bw / 2, oy = by + bh / 2;
   const padX = (bh * h / w) * 0.3; // a little room either side, a third of the line height
+  const keep = (want: number, size: number, frame: number, o: number) => {
+    // after scaling by `target` about the line (o = its offset inside the card) and translating by t, the card spans
+    // [L0 + o - o*target + t, L0 + o + (size - o)*target + t]; keep that span covering the whole frame when it can
+    if (size * target <= frame) return want;
+    const L0 = (frame - size) / 2;
+    const hi = -(L0 + o - o * target), lo = frame - (L0 + o + (size - o) * target);
+    return Math.min(hi, Math.max(lo, want));
+  };
+  const tx = keep((50 - ox) * w / 100, w, 1920, (ox / 100) * w);
+  const ty = keep((50 - oy) * h / 100, h, 1080, (oy / 100) * h);
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} filter={`brightness(${1 - 0.5 * card}) saturate(.7) blur(${3 * card}px)`} />
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <div style={{position: 'relative', width: w, height: h, opacity: card, boxShadow: '0 22px 50px rgba(0,0,0,.5)',
-        // the marked line travels to the middle of the frame while the camera moves in on it
-        transform: `translate(${(50 - ox) * w / 100 * travel}px, ${(50 - oy) * h / 100 * travel}px) rotate(-.5deg) scale(${zoom})`,
+        // the marked line travels toward the middle while the camera moves in, but the page edge never comes inside the
+        // frame once the page is bigger than it (so no background band or empty paper edge in the middle of the shot)
+        transform: `translate(${tx * travel}px, ${ty * travel}px) rotate(-.5deg) scale(${zoom})`,
         transformOrigin: `${ox}% ${oy}%`}}>
         <Img src={staticFile(doc)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.15) contrast(1.05)'}} />
-        <div style={{position: 'absolute', left: `${bx - padX}%`, top: `${by - bh * 0.15}%`, width: `${bw + 2 * padX}%`, height: `${bh * 1.3}%`, background: '#ffe14d',
+        <div style={{position: 'absolute', left: `${bx - padX}%`, top: `${by - bh * 0.15}%`, width: `${bw + 2 * padX}%`, height: `${bh * 1.3}%`, background: marker,
           mixBlendMode: 'multiply', opacity: 0.85, transform: `scaleX(${mark}) rotate(-.3deg)`, transformOrigin: 'left center', borderRadius: '2px 6px 3px 7px'}} />
-        <Tape style={{left: w / 2 - 75, top: -18}} rotate={2} />
+        {/* the tape goes on the edge away from the marked line, never over it */}
+        <div style={{opacity: 1 - travel}}><Tape style={oy < 30 ? {left: w / 2 - 75, bottom: -18} : {left: w / 2 - 75, top: -18}} rotate={2} /></div>
       </div>
     </AbsoluteFill>
   </AbsoluteFill>;
@@ -265,5 +252,29 @@ export const ThenNow: React.FC<{before: string; after: string; yearBefore: strin
       opacity: split < 99.5 ? 1 : 0}} />
     {tag(yearBefore, tagA, 'left')}
     {tag(yearAfter, tagB, 'right')}
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T15: a quick burst of 3–5 different photos (fixed)
+
+/** Your T15: each photo pushes the previous one up and out with a short motion blur. The first photo is on screen
+ * from the first frame (no empty start); every photo is different (the build refuses repeats). */
+export const PhotoBurst: React.FC<{photos: string[]; positions?: string[]; durationFrames: number}> = ({photos, positions = [], durationFrames}) => {
+  const f = useCurrentFrame();
+  const slot = durationFrames / Math.max(1, photos.length);
+  const smooth = (from: number, to: number) => interpolate(f, [from, to], [0, 1], {easing: Easing.bezier(0.22, 1, 0.36, 1), ...clamp});
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    {photos.map((src, i) => {
+      const start = Math.round(i * slot);
+      const next = i + 1 < photos.length ? Math.round((i + 1) * slot) : undefined;
+      const enter = i === 0 ? 1 : smooth(start, start + 12);
+      const leave = next === undefined ? 0 : smooth(next, next + 12);
+      const motion = Math.max(1 - enter, leave);
+      if (f < start - 1 || (next !== undefined && f > next + 13)) return null;
+      return <Img key={`${src}-${i}`} src={staticFile(src)} style={{position: 'absolute', left: 0, top: (1 - enter) * 1080 - leave * 1080, width: '100%', height: '100%',
+        objectFit: 'cover', objectPosition: positions[i] ?? 'center', transform: `scale(${1 + Math.max(0, f - start) * 0.00025 + motion * 0.012})`,
+        filter: `grayscale(.55) contrast(1.03) blur(${motion * 4}px)`}} />;
+    })}
+    <div style={{position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#0001,transparent 30%,transparent 70%,#0001)'}} />
   </AbsoluteFill>;
 };
