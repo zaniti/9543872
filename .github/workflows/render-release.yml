@@ -122,7 +122,7 @@ jobs:
         run: |
           mkdir -p package public out
           gh release download "$RELEASE_TAG" --pattern "${{ matrix.zip }}" --dir package
-          unzip -q "package/${{ matrix.zip }}" -d public
+          unzip -o -q "package/${{ matrix.zip }}" -d public  # -o: the package's own files (e.g. its channel paper) replace the repo's copies; never prompt
           find public -maxdepth 2 -type f | sed 's#^#  #'
 
       - name: Detect renderer and chunk frame range
