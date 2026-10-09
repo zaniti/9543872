@@ -112,7 +112,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Restore renderer dependencies
+        id: deps
+        uses: actions/cache@v4
+        with:
+          # the installed packages and Remotion's browser (node_modules/.remotion): ~5 s to restore instead of ~60 s of npm ci
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install renderer dependencies
+        if: steps.deps.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Download story package
@@ -183,9 +192,8 @@ jobs:
           start = min(start, total_frames - 1)
           end = min(max(end, start), total_frames - 1)
 
-          requested = 2
-          # GitHub hosted ubuntu runners usually expose 2 CPU cores. Remotion errors if this is higher.
-          safe_concurrency = min(requested, os.cpu_count() or requested)
+          # Every core the runner has (public repositories get 4). Remotion errors above the core count.
+          safe_concurrency = max(1, os.cpu_count() or 2)
 
           out = Path(os.environ['GITHUB_OUTPUT'])
           with out.open('a', encoding='utf-8') as fh:
@@ -231,7 +239,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Restore renderer dependencies
+        id: deps
+        uses: actions/cache@v4
+        with:
+          # the installed packages and Remotion's browser (node_modules/.remotion): ~5 s to restore instead of ~60 s of npm ci
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install renderer dependencies
+        if: steps.deps.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Download rendered chunks
