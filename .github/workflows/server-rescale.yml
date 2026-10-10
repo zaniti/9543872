@@ -1,8 +1,10 @@
 name: Server rescale
 run-name: Server rescale · ${{ inputs.request_id }}
 
-# Started by the app when the owner taps "Rescale" in Telegram. The server cannot rescale itself (it must be powered
-# off), so the steps run here: snapshot, shut down, rescale (CPU, RAM and disk), power on.
+# Started by the app when the owner taps "Rescale" or "Move" in Telegram. The server cannot do this itself (it must be
+# powered off), so the steps run here. Rescale: snapshot, shut down, rescale (CPU, RAM and disk), power on.
+# Move (to another location, when the size is only available there): shut down, snapshot, create the new size there
+# from the snapshot (same SSH keys and firewalls), start it. The old server stays powered off as a backup.
 # Secrets (repository settings): HETZNER_RW_TOKEN (Read & Write), HETZNER_SERVER_ID. The log shows step names only.
 
 on:
@@ -16,6 +18,10 @@ on:
         description: "Matches this run in the app"
         required: false
         default: "manual"
+      move_to:
+        description: "Empty = rescale in place; fsn1, nbg1 or hel1 = move the server there"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -32,6 +38,7 @@ jobs:
       HCLOUD_TOKEN: ${{ secrets.HETZNER_RW_TOKEN }}
       SERVER_ID: ${{ secrets.HETZNER_SERVER_ID }}
       TYPE: ${{ inputs.server_type }}
+      MOVE_TO: ${{ inputs.move_to }}
     steps:
       - name: Rescale the server
         run: |
@@ -71,6 +78,53 @@ jobs:
                 -d "$(jq -cn --arg n "$name" '{name: $n}')" "$API/servers/$SERVER_ID")
             [ "$w" = 200 ] || { echo "FAIL: the token can read but not write (make it Read & Write)"; exit 1; }
             echo "OK: the token can read and write, the server ID is right (server is $size now). Nothing was changed."
+            exit 0
+          fi
+
+          if [ -n "$MOVE_TO" ]; then
+            case "$MOVE_TO" in fsn1|nbg1|hel1) ;; *) echo "Unsupported location"; exit 1 ;; esac
+            [ "$TYPE" != check ] || { echo "Nothing to move in check mode"; exit 1; }
+            info=$(api "$API/servers/$SERVER_ID")
+            name=$(echo "$info" | jq -r .server.name); echo "::add-mask::$name"
+            firewalls=$(echo "$info" | jq -c '[.server.public_net.firewalls[]?.id | {firewall: .}]')
+            keys=$(api "$API/ssh_keys" | jq -c '[.ssh_keys[].id]')
+
+            echo "1/5 shut down (a clean copy needs the server stopped)"
+            wait_action "$(act shutdown)" || true
+            for _ in $(seq 1 30); do [ "$(status)" = off ] && break; sleep 10; done
+            if [ "$(status)" != off ]; then wait_action "$(act poweroff)"; fi
+
+            echo "2/5 snapshot (a full copy of the server)"
+            snap=$(api -X POST "$API/servers/$SERVER_ID/actions/create_image" -d '{"type":"snapshot","description":"move"}')
+            if ! wait_action "$(echo "$snap" | jq -r .action.id)"; then
+              echo "Snapshot failed: powering the server back on"; wait_action "$(act poweron)" || true; exit 1
+            fi
+            image=$(echo "$snap" | jq -r .image.id)
+
+            echo "3/5 create the new server in the new location"
+            body=$(jq -cn --arg n "$name-$TYPE-$MOVE_TO" --arg t "$TYPE" --arg l "$MOVE_TO" --argjson i "$image" \
+              --argjson k "$keys" --argjson f "$firewalls" --arg o "$SERVER_ID" \
+              '{name: $n, server_type: $t, location: $l, image: $i, ssh_keys: $k, firewalls: $f, start_after_create: true, labels: {moved_from: $o}}')
+            if ! created=$(api -X POST "$API/servers" -d "$body"); then
+              echo "Could not create the new server: powering the old one back on"; wait_action "$(act poweron)" || true; exit 1
+            fi
+            new_id=$(echo "$created" | jq -r .server.id); echo "::add-mask::$new_id"
+
+            echo "4/5 start it"
+            started=no
+            if wait_action "$(echo "$created" | jq -r .action.id)"; then
+              for _ in $(seq 1 60); do
+                [ "$(api "$API/servers/$new_id" | jq -r .server.status)" = running ] && { started=yes; break; }
+                sleep 10
+              done
+            fi
+            if [ "$started" != yes ]; then  # never leave two copies that could both come up: remove the new one
+              echo "The new server did not start: removing it and powering the old one back on"
+              api -X DELETE "$API/servers/$new_id" >/dev/null || true
+              wait_action "$(act poweron)" || true
+              exit 1
+            fi
+            echo "5/5 done: the new server is running; the old one stays powered off as a backup"
             exit 0
           fi
 
