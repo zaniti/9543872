@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       server_type:
-        description: "cx43 or cx53"
+        description: "cx43 or cx53 (or check: test the secrets, changes nothing)"
         required: true
         type: string
       request_id:
@@ -37,8 +37,9 @@ jobs:
         run: |
           set -euo pipefail
           echo "::add-mask::$SERVER_ID"
-          case "$TYPE" in cx43|cx53) ;; *) echo "Unsupported size"; exit 1 ;; esac
-          [ -n "$HCLOUD_TOKEN" ] && [ -n "$SERVER_ID" ] || { echo "Secrets missing"; exit 1; }
+          case "$TYPE" in cx43|cx53|check) ;; *) echo "Unsupported size"; exit 1 ;; esac
+          [ -n "$HCLOUD_TOKEN" ] || { echo "Secret HETZNER_RW_TOKEN is missing"; exit 1; }
+          [ -n "$SERVER_ID" ] || { echo "Secret HETZNER_SERVER_ID is missing"; exit 1; }
           API="${HCLOUD_API:-https://api.hetzner.cloud/v1}"
           api() { curl -sS --fail -H "Authorization: Bearer $HCLOUD_TOKEN" -H "Content-Type: application/json" "$@"; }
           act() {
@@ -56,6 +57,22 @@ jobs:
             return 1
           }
           status() { api "$API/servers/$SERVER_ID" | jq -r .server.status; }
+
+          if [ "$TYPE" = check ]; then  # read the server, then save its own name back: proves Read & Write, changes nothing
+            info=$(curl -sS -w "\n%{http_code}" -H "Authorization: Bearer $HCLOUD_TOKEN" "$API/servers/$SERVER_ID")
+            code=$(echo "$info" | tail -1)
+            [ "$code" = 401 ] && { echo "FAIL: the token is not valid"; exit 1; }
+            [ "$code" = 404 ] && { echo "FAIL: no server with that ID (check HETZNER_SERVER_ID)"; exit 1; }
+            [ "$code" = 200 ] || { echo "FAIL: Hetzner answered $code"; exit 1; }
+            body=$(echo "$info" | sed '$d')
+            name=$(echo "$body" | jq -r .server.name); echo "::add-mask::$name"
+            size=$(echo "$body" | jq -r .server.server_type.name)
+            w=$(curl -sS -o /dev/null -w "%{http_code}" -X PUT -H "Authorization: Bearer $HCLOUD_TOKEN" -H "Content-Type: application/json" \
+                -d "$(jq -cn --arg n "$name" '{name: $n}')" "$API/servers/$SERVER_ID")
+            [ "$w" = 200 ] || { echo "FAIL: the token can read but not write (make it Read & Write)"; exit 1; }
+            echo "OK: the token can read and write, the server ID is right (server is $size now). Nothing was changed."
+            exit 0
+          fi
 
           echo "1/4 snapshot (a safety copy, taken while the server runs)"
           wait_action "$(act create_image '{"type":"snapshot","description":"before rescale"}')"
