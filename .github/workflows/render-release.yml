@@ -184,6 +184,13 @@ jobs:
               duration_seconds = max(ends) if ends else 8
 
           total_frames = max(30, math.ceil(duration_seconds * fps))
+          # A package that states its exact length (Studio/director edits: totalFrames) is rendered to exactly that:
+          # rounding the seconds up asked for one frame past the end and the last chunk failed every time.
+          try:
+              if int(data.get('totalFrames') or 0) > 0:
+                  total_frames = int(data['totalFrames'])
+          except (TypeError, ValueError):
+              pass
           chunk_count = positive_int(os.environ.get('CHUNK_COUNT'), 1)
           chunk_index = positive_int(int(os.environ.get('CHUNK_INDEX', '0')) + 1, 1) - 1
           chunk_index = min(max(chunk_index, 0), chunk_count - 1)
