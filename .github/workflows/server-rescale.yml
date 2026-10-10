@@ -1,0 +1,78 @@
+name: Server rescale
+run-name: Server rescale · ${{ inputs.request_id }}
+
+# Started by the app when the owner taps "Rescale" in Telegram. The server cannot rescale itself (it must be powered
+# off), so the steps run here: snapshot, shut down, rescale (CPU, RAM and disk), power on.
+# Secrets (repository settings): HETZNER_RW_TOKEN (Read & Write), HETZNER_SERVER_ID. The log shows step names only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_type:
+        description: "cx43 or cx53"
+        required: true
+        type: string
+      request_id:
+        description: "Matches this run in the app"
+        required: false
+        default: "manual"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-rescale
+  cancel-in-progress: false
+
+jobs:
+  rescale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      HCLOUD_TOKEN: ${{ secrets.HETZNER_RW_TOKEN }}
+      SERVER_ID: ${{ secrets.HETZNER_SERVER_ID }}
+      TYPE: ${{ inputs.server_type }}
+    steps:
+      - name: Rescale the server
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$SERVER_ID"
+          case "$TYPE" in cx43|cx53) ;; *) echo "Unsupported size"; exit 1 ;; esac
+          [ -n "$HCLOUD_TOKEN" ] && [ -n "$SERVER_ID" ] || { echo "Secrets missing"; exit 1; }
+          API="${HCLOUD_API:-https://api.hetzner.cloud/v1}"
+          api() { curl -sS --fail -H "Authorization: Bearer $HCLOUD_TOKEN" -H "Content-Type: application/json" "$@"; }
+          act() {
+            body="${2:-}"
+            [ -n "$body" ] || body='{}'
+            api -X POST "$API/servers/$SERVER_ID/actions/$1" -d "$body" | jq -r .action.id
+          }
+          wait_action() {
+            for _ in $(seq 1 240); do
+              st=$(api "$API/actions/$1" | jq -r .action.status)
+              [ "$st" = success ] && return 0
+              [ "$st" = error ] && return 1
+              sleep 10
+            done
+            return 1
+          }
+          status() { api "$API/servers/$SERVER_ID" | jq -r .server.status; }
+
+          echo "1/4 snapshot (a safety copy, taken while the server runs)"
+          wait_action "$(act create_image '{"type":"snapshot","description":"before rescale"}')"
+
+          echo "2/4 shut down"
+          wait_action "$(act shutdown)" || true
+          for _ in $(seq 1 30); do [ "$(status)" = off ] && break; sleep 10; done
+          if [ "$(status)" != off ]; then wait_action "$(act poweroff)"; fi
+
+          echo "3/4 rescale (CPU, RAM and disk)"
+          resize=$(jq -cn --arg t "$TYPE" '{server_type: $t, upgrade_disk: true}')
+          if ! wait_action "$(act change_type "$resize")"; then
+            echo "Rescale failed: powering the server back on unchanged"
+            wait_action "$(act poweron)" || true
+            exit 1
+          fi
+
+          echo "4/4 power on"
+          wait_action "$(act poweron)"
+          echo "done"
