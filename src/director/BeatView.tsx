@@ -20,12 +20,16 @@ import {DocumentPair, MapPair, PaperPrints, PhotoLabels, SourceCard} from './Ori
 export type Beat = ClaudeFuggerBeat & {revealShift?: number};
 const gridPaper = 'templates/clip6/paper-grid.jpg';
 
+/** Frames to build a scene early in the review player (see Job.tsx); 0 when rendering. */
+export const Premount = React.createContext(0);
+
 /** Engine-cut clips are already framed to 1920x1080 by the dimension rule; play them natively, muted, back to back. */
 const EngineClips: React.FC<{beat: Beat}> = ({beat}) => {
+  const premount = React.useContext(Premount);
   let from = 0;
   return <AbsoluteFill style={{background: '#111'}}>
     {(beat.assets[0].videoParts ?? []).map((part) => {
-      const shot = <Sequence key={part.src} from={from} durationInFrames={part.durationFrames}>
+      const shot = <Sequence key={part.src} from={from} durationInFrames={part.durationFrames} premountFor={premount}>
         <OffthreadVideo muted src={staticFile(part.src)} style={{width: '100%', height: '100%', filter: 'saturate(.8) contrast(1.055) brightness(.95) sepia(.045)'}} />
       </Sequence>;
       from += part.durationFrames;
@@ -42,8 +46,8 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
   const shift = beat.revealShift ?? 0;
   const bgPos = a?.objectPosition ?? '50% 50%';
   switch (beat.mode) {
-    case 'T1': return <BalfourTag background={a.src} title={s('title')} year={s('year')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T2': return <BalfourTag background={a.src} title={s('title')} year="" backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1': return <BalfourTag background={a.src} backgroundVideo={a.videoParts?.[0]?.src} title={s('title')} year={s('year')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T2': return <BalfourTag background={a.src} backgroundVideo={a.videoParts?.[0]?.src} title={s('title')} year="" backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
     case 'T3': return <PortraitYearTag background={a.src} year={s('year')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
     case 'T5': return <PortraitFeatureCard background={a.src} portrait={b.src} label={s('label')} sourceNote="" backgroundLayout="cover" backgroundPosition={bgPos} portraitPosition={b.objectPosition} revealShift={shift} />;
     case 'T6': return <MetricPortraitCard paper={gridPaper} portrait={a.src} portraitPosition={a.objectPosition} firstLead={s('firstLead')} firstEmphasis={s('firstEmphasis')} firstTail="" secondLead={s('secondLead')} secondEmphasis={s('secondEmphasis')} secondTail="" zoomDurationFrames={beat.durationFrames} revealShift={shift} />;
@@ -57,7 +61,7 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
     // second designs and new kinds: background = a photo or a film clip (bgfilm); the map / document is the last card
     case 'T22b': return <StatementPaper background={a.src} backgroundVideo={a.videoParts?.[0]?.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T11b': return <SentenceMarker background={a.src} backgroundVideo={a.videoParts?.[0]?.src} sentence={s('sentence')} backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T26': return <MapCircle background={a.src} backgroundVideo={a.videoParts?.[0]?.src} map={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} label={s('label')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T26': return <MapCircle background={a.src} backgroundVideo={a.videoParts?.[0]?.src} map={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} label={s('label')} markerColor={beat.data?.markerColor as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T27': return <DocumentMark background={a.src} backgroundVideo={a.videoParts?.[0]?.src} doc={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} marker={beat.data?.marker as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
     // the owner's reference templates 4, 12, 13, 15, 17, 20: every picture is a card (documents and maps pre-trimmed)
     case 'T4': return <PaperPrints photos={beat.assets.map((x) => x.src)} positions={beat.assets.map((x) => x.objectPosition)} durationFrames={beat.durationFrames} revealShift={shift} />;
@@ -70,6 +74,6 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T25': return <CompareBars heading={s('heading')} rows={(beat.data?.rows ?? []) as CompareRow[]} prefix={s('prefix')} suffix={s('suffix')} note={s('note') || undefined} revealShift={shift} />;
     case 'video': return <EngineClips beat={beat} />;
     case 'regular': return <RegularPhotoZoom shots={[{src: a.src, durationInFrames: beat.durationFrames, layout: a.layout === 'aspect-safe' ? 'aspect-safe' : 'landscape-cover',
-      aspectRatio: a.aspectRatio, objectPosition: a.objectPosition, zoomOrigin: a.zoomOrigin}]} />;
+      aspectRatio: a.aspectRatio, objectPosition: a.objectPosition, zoomOrigin: a.zoomOrigin, pan: a.pan}]} />;
   }
 };

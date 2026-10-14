@@ -10,16 +10,51 @@ import {AbsoluteFill, Easing, Img, interpolate, staticFile} from 'remotion';
 export let RED = '#aa1533'; // bars only (title, name, year bars, comparison bars)
 export let TEXT_RED = '#c8130b'; // red text: headings, numbers, emphasised words (brighter, reads on photos)
 export let CRIMSON = '#aa1533'; // year tags only
+export let TEXT_ON_PAPER = '#c8130b'; // the text colour where it sits on paper or a white print border (see readableOnPaper)
 export const DEFAULT_THEME = {bar: '#aa1533', text: '#c8130b'};
 export type Theme = {bar?: string; text?: string; paper?: string};
 const HEX = /^#[0-9a-fA-F]{6}$/;
+const luminance = (hex: string) => {
+  const c = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+/** A channel colour that can't be read on paper (e.g. yellow: contrast under 3) is darkened, same hue, until it reads
+ * well (4.5). Colours that already read (the default red is 4.8) are kept exactly. Photos and dark boxes keep the
+ * colour as chosen. */
+export const readableOnPaper = (hex: string, paper = '#ece7d6') => {
+  if (contrast(hex, paper) >= 3) return hex;
+  const rgb = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16));
+  for (let f = 0.95; f > 0.05; f -= 0.05) {
+    const out = '#' + rgb.map((v) => Math.round(v * f).toString(16).padStart(2, '0')).join('');
+    if (contrast(out, paper) >= 4.5) return out;
+  }
+  return '#17150f';
+};
 let customText: [number, number, number] | null = null;
+// Numbers on screen are written the way the narration's language writes them: 3,500 in English, 3.500 in Spanish (a
+// comma there is the decimal mark, so 3,500 reads as three and a half). Grouped from 1,000 up in every language.
+const THOUSANDS: Record<string, string> = {en: ',', es: '.', de: '.', it: '.', pt: '.', nl: '.', fr: '\u202f'};
+let THOUSANDS_MARK = ',';
+export const setLanguage = (language?: string | null) => {
+  THOUSANDS_MARK = THOUSANDS[(language || 'en').slice(0, 2).toLowerCase()] ?? ',';
+};
+/** A whole number with the thousands mark of the video's language. */
+export const formatNumber = (n: number) => {
+  const r = Math.round(n);
+  return (r < 0 ? '-' : '') + String(Math.abs(r)).replace(/\B(?=(\d{3})+(?!\d))/g, THOUSANDS_MARK);
+};
+
 export const applyTheme = (theme?: Theme | null) => {
   const bar = theme?.bar && HEX.test(theme.bar) ? theme.bar : DEFAULT_THEME.bar;
   const text = theme?.text && HEX.test(theme.text) ? theme.text : DEFAULT_THEME.text;
   RED = bar;
   CRIMSON = bar;
   TEXT_RED = text;
+  TEXT_ON_PAPER = readableOnPaper(text);
   customText = text.toLowerCase() === DEFAULT_THEME.text ? null : [1, 3, 5].map((k) => parseInt(text.slice(k, k + 2), 16)) as [number, number, number];
   // the channel's paper (a built-in under templates/papers/ or the job's own uploaded paper.jpg); none = squared paper
   const paper = theme?.paper && /^(templates\/papers\/[a-z]+\.jpg|jobs\/[^/]+\/paper\.jpg)$/.test(theme.paper) ? theme.paper : '';

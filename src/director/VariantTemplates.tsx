@@ -151,7 +151,7 @@ const handCircle = (cx: number, cy: number, rx: number, ry: number) => {
 };
 
 /** `box` = where the place name is printed on the map, in percent [left, top, width, height] (found by OCR). */
-export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number, number, number, number]; label?: string}> = ({background, backgroundVideo, map, aspect, box, label = '', backgroundPosition = '50% 50%', revealShift = 0}) => {
+export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number, number, number, number]; label?: string; markerColor?: string}> = ({background, backgroundVideo, map, aspect, box, label = '', markerColor, backgroundPosition = '50% 50%', revealShift = 0}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const {w, h} = fit(aspect, 1380, 800);
@@ -175,7 +175,7 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
           ? <><Tape style={{right: -40, top: -12}} rotate={28} /><Tape style={{left: -40, bottom: -12}} rotate={28} /></>
           : <><Tape style={{left: -40, top: -12}} rotate={-28} /><Tape style={{right: -40, bottom: -12}} rotate={-28} /></>}
         <svg width={w} height={h} style={{position: 'absolute', inset: 0, overflow: 'visible'}}>
-          <path d={handCircle(cx, cy, rx, ry)} fill="none" stroke={RED} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round"
+          <path d={handCircle(cx, cy, rx, ry)} fill="none" stroke={markerColor ?? RED} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round"
             pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} style={{filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.25))'}} />
         </svg>
         {label ? <div style={{position: 'absolute', top: cy - 30, ...(right ? {left: cx + rx + 26} : {right: w - cx + rx + 26}),

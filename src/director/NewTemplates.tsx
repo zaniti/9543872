@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame} from 'remotion';
-import {CRIMSON, INK, PaperGround, RED, TEXT_RED, RiseWords, WipeBar, clamp, easeInOut, easeOut, textBase} from './channelStyle';
+import {CRIMSON, INK, PaperGround, RED, TEXT_ON_PAPER, RiseWords, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase} from './channelStyle';
 
 /** A real photo as a print on the paper: white border, slight tilt, drops in from below and settles. */
 const Print: React.FC<{src: string; x: number; y: number; w: number; h: number; frame: number; start: number; tilt?: number; position?: string; border?: number}> = ({src, x, y, w, h, frame, start, tilt = 0, position = '50% 35%', border = 14}) => {
@@ -28,7 +28,7 @@ export const TimelineStrip: React.FC<TimelineStripProps> = ({heading, events, re
   const headIn = easeOut(frame, 0, 14);
   return <AbsoluteFill style={{overflow: 'hidden', background: '#e7e7d9'}}>
     <PaperGround frame={frame} />
-    <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', color: TEXT_RED, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
+    <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', color: TEXT_ON_PAPER, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
       opacity: headIn, transform: `translateY(${(1 - headIn) * 16}px)`}}>{heading}</div>
     <svg width="1920" height="1080" style={{position: 'absolute', inset: 0}}>
       <line x1={left - 60} y1={lineY} x2={left - 60 + (right - left + 120) * line} y2={lineY} stroke={INK} strokeWidth={6} strokeLinecap="round" />
@@ -70,7 +70,7 @@ export const CompareBars: React.FC<CompareBarsProps> = ({heading, rows, prefix =
   const lastAt = Math.max(...rows.map((r, i) => r.at ?? 18 + i * 34));
   return <AbsoluteFill style={{overflow: 'hidden', background: '#e7e7d9'}}>
     <PaperGround frame={frame} />
-    <div style={{position: 'absolute', top: 80, left: 0, right: 0, textAlign: 'center', color: TEXT_RED, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
+    <div style={{position: 'absolute', top: 80, left: 0, right: 0, textAlign: 'center', color: TEXT_ON_PAPER, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
       opacity: headIn, transform: `translateY(${(1 - headIn) * 16}px)`}}>{heading}</div>
     {rows.map((r, i) => {
       const at = r.at ?? 18 + i * 34;
@@ -78,7 +78,7 @@ export const CompareBars: React.FC<CompareBarsProps> = ({heading, rows, prefix =
       const grow = interpolate(frame, [at + 6, at + 46], [0, 1], {...clamp, easing: Easing.out(Easing.cubic)});
       const w = (r.value / max) * barW * grow;
       const color = r.highlight ?? i === 0 ? RED : INK;
-      const shown = r.display && grow >= 1 ? r.display : `${prefix}${Math.round(r.value * grow).toLocaleString('en-US')}${suffix}`;
+      const shown = r.display && grow >= 1 ? r.display : `${prefix}${formatNumber(r.value * grow)}${suffix}`;
       return <React.Fragment key={i}>
         {r.photo ? <Print src={r.photo} position={r.position} x={250} y={y - 20} w={200} h={200} frame={frame} start={at - 6} tilt={i % 2 ? 2 : -2} border={9} /> : null}
         <div style={{position: 'absolute', left: barX, top: y - 4, color: INK, ...textBase, fontWeight: 700, fontSize: 46, opacity: easeOut(frame, at, at + 10)}}>
@@ -86,7 +86,7 @@ export const CompareBars: React.FC<CompareBarsProps> = ({heading, rows, prefix =
         </div>
         <div style={{position: 'absolute', left: barX, top: y + 70, width: barW, height: 70, background: 'rgba(23,21,15,.07)'}} />
         <div style={{position: 'absolute', left: barX, top: y + 70, width: w, height: 70, background: color, boxShadow: '0 6px 14px rgba(0,0,0,.18)'}} />
-        <div style={{position: 'absolute', left: barX + w + 22, top: y + 72, color: color === RED ? TEXT_RED : color, ...textBase, fontWeight: 700, fontSize: 58, lineHeight: '66px', fontVariantNumeric: 'tabular-nums',
+        <div style={{position: 'absolute', left: barX + w + 22, top: y + 72, color: color === RED ? TEXT_ON_PAPER : color, ...textBase, fontWeight: 700, fontSize: 58, lineHeight: '66px', fontVariantNumeric: 'tabular-nums',
           opacity: easeOut(frame, at + 8, at + 16), whiteSpace: 'nowrap'}}>{shown}</div>
       </React.Fragment>;
     })}

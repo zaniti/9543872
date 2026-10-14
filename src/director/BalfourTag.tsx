@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
 import {CRIMSON} from './channelStyle';
 
@@ -35,6 +35,7 @@ const yearStartAt = (index:number, length:number) => {
 
 export type DocumentaryTypeOnLabelProps = {
   background?: string;
+  backgroundVideo?: string; // a film clip instead of the photo (bgfilm=): plays as it is, no zoom
   title?: string;
   year?: string;
   zoomEnd?: number;
@@ -44,6 +45,7 @@ export type DocumentaryTypeOnLabelProps = {
 
 export const BalfourTag:React.FC<DocumentaryTypeOnLabelProps> = ({
   background = 'templates/balfour-clean.jpg',
+  backgroundVideo,
   title = lowerCopy,
   year: suppliedYear = yearCopy,
   zoomEnd = 1.062,
@@ -66,7 +68,9 @@ export const BalfourTag:React.FC<DocumentaryTypeOnLabelProps> = ({
     start: yearStartAt(index, suppliedYear.length),
   })).filter(({start}) => frame >= start);
   return <AbsoluteFill style={{background:'#0e1012', overflow:'hidden'}}>
-    {backgroundLayout === 'aspect-safe' ? <>
+    {backgroundVideo ? <OffthreadVideo muted src={staticFile(backgroundVideo)} style={{
+      position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+    }} /> : backgroundLayout === 'aspect-safe' ? <>
       <Img src={staticFile(background)} style={{position: 'absolute', width:'100%', height:'100%', objectFit:'cover', opacity: .36, filter:'blur(18px) brightness(.58) saturate(.68)', objectPosition: backgroundPosition, transform: `scale(${backgroundScale * 1.08})`, transformOrigin: backgroundPosition}} />
       {/* The evidence foreground must remain fully legible; animate only its backdrop. */}
       <Img src={staticFile(background)} style={{position: 'absolute', inset: 0, width:'100%', height:'100%', objectFit:'contain', transform: 'scale(1)', transformOrigin: 'center center'}} />

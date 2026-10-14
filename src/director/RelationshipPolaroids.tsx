@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {tagCharacterOpacity, tagCharacterRise, tagCharacterStart} from './documentaryMotion';
-import {FONT, TEXT_RED as RED, easeOut, paperFilter, paperFor, paperVeil} from './channelStyle';
+import {FONT, TEXT_ON_PAPER as RED, easeOut, paperFilter, paperFor, paperVeil} from './channelStyle';
 
 export type RelationshipPolaroidsProps={paper?:string; first?:string; second?:string; firstName?:string; secondName?:string; sourceNote?:string; revealShift?:number; firstPosition?:string; secondPosition?:string};
 

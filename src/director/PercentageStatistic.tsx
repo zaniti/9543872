@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CREAM, FONT, TEXT_RED, RiseWords, clamp, easeOut} from './channelStyle';
+import {CREAM, FONT, TEXT_RED, RiseWords, clamp, easeOut, formatNumber} from './channelStyle';
 
 /** Template 14: one number and its meaning.
  * Default "highlight": everything appears in white (soft fade), then the number and the important words turn the channel
@@ -46,7 +46,7 @@ export const PercentageStatistic: React.FC<{background?: string; percent?: numbe
       <div style={{filter: 'drop-shadow(0 4px 14px rgba(0,0,0,.45))'}}><div style={{color: TEXT_RED, fontFamily: FONT, fontWeight: 700, fontSize: 124, letterSpacing: -3, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
         opacity: numberIn, transform: `translateY(${(1 - numberIn) * (calm ? 10 : 24)}px) scale(${settle})`,
         ...(hl ? sweep(interpolate(f, [14, 54], [0, 1], {...clamp, easing: Easing.inOut(Easing.sin)})) : {})}}>
-        {prefix}{Math.round(count).toLocaleString('en-US')}{suffix}
+        {prefix}{formatNumber(count)}{suffix}
       </div></div>
       <div style={{maxWidth: 1180, textAlign: 'center', marginTop: 18, color: CREAM, fontFamily: FONT, fontWeight: 700, fontSize: 58, lineHeight: 1.12, letterSpacing: -0.5}}>
         {calm ? <span style={{display: 'inline-block', opacity: copyIn, transform: `translateY(${(1 - copyIn) * 10}px)`, filter: 'drop-shadow(0 3px 12px rgba(0,0,0,.45))'}}>

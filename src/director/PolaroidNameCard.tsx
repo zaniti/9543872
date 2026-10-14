@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {FONT, TEXT_RED as RED, easeOut, paperFilter, paperFor, paperVeil} from './channelStyle';
+import {FONT, TEXT_ON_PAPER as RED, easeOut, paperFilter, paperFor, paperVeil} from './channelStyle';
 
 export type PolaroidNameCardProps = {paper?: string; portrait?: string; name?: string; revealShift?: number; portraitPosition?: string};
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {layoutForAspectRatio, safeForegroundFrame} from './aspectFrame';
 
 type PhotoShot = {
@@ -14,6 +14,14 @@ type PhotoShot = {
   zoomOrigin?: string;
   /** Evidence graphics must remain sharp to their outer edge. */
   edgeTreatment?: 'lens' | 'none';
+  /** A subject too tall or wide for the frame: the crop slides from `from` to `to` (object-positions) over the shot. */
+  pan?: {from: string; to: string};
+};
+
+const lerpPosition = (from: string, to: string, t: number) => {
+  const a = from.split(' ').map((v) => parseFloat(v));
+  const b = to.split(' ').map((v) => parseFloat(v));
+  return `${a[0] + (b[0] - a[0]) * t}% ${a[1] + (b[1] - a[1]) * t}%`;
 };
 
 const WIDTH = 1920;
@@ -97,11 +105,14 @@ const RegularShot: React.FC<{shot: PhotoShot; startFrame: number; isLast: boolea
     extrapolateRight: 'clamp',
   });
   const fromScale = shot.fromScale ?? 1;
-  const toScale = fromScale + (durationInFrames / 30) * ZOOM_PER_SECOND;
+  // a pan carries the motion: the push-in is halved so the two never fight
+  const toScale = fromScale + (durationInFrames / 30) * ZOOM_PER_SECOND * (shot.pan ? 0.5 : 1);
   const scale = interpolate(progress, [0, 1], [fromScale, toScale]);
-  const position = shot.objectPosition ?? '50% 50%';
-  // The push-in is anchored on the focal point (faces), so heads never drift out of frame.
-  const [ox, oy] = (shot.zoomOrigin ?? position).split(' ').map((v) => parseFloat(v) / 100);
+  const position = shot.pan
+    ? lerpPosition(shot.pan.from, shot.pan.to, interpolate(progress, [0, 1], [0, 1], {easing: Easing.inOut(Easing.sin)}))
+    : shot.objectPosition ?? '50% 50%';
+  // The push-in is anchored on the focal point (faces), so heads never drift out of frame; a pan zooms on the centre.
+  const [ox, oy] = (shot.pan ? '50% 50%' : shot.zoomOrigin ?? position).split(' ').map((v) => parseFloat(v) / 100);
   const originX = WIDTH * (Number.isFinite(ox) ? ox : 0.5);
   const originY = HEIGHT * (Number.isFinite(oy) ? oy : 0.5);
   const transform = `translate(${originX} ${originY}) scale(${scale}) translate(${-originX} ${-originY})`;
@@ -121,7 +132,7 @@ const RegularShot: React.FC<{shot: PhotoShot; startFrame: number; isLast: boolea
     <div style={{...safeForegroundFrame(shot.aspectRatio), overflow: 'visible', transform: `scale(${scale})`, transformOrigin: safeOrigin}}>
       <Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(.8) contrast(1.055) brightness(.95) sepia(.045)', boxShadow: '0 0 60px rgba(0,0,0,.35)'}} />
     </div>
-  ) : shot.edgeTreatment === 'none' ? <Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: position, transform: `scale(${scale})`, transformOrigin: shot.zoomOrigin ?? position}} /> : <LensTreatment image={image} transform={transform} uniqueId={`regular-lens-${startFrame}`} rect={coverRect(shot.aspectRatio, position)} />;
+  ) : shot.edgeTreatment === 'none' ? <Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: position, transform: `scale(${scale})`, transformOrigin: shot.pan ? '50% 50%' : shot.zoomOrigin ?? position}} /> : <LensTreatment image={image} transform={transform} uniqueId={`regular-lens-${startFrame}`} rect={coverRect(shot.aspectRatio, position)} />;
 
   return (
     <AbsoluteFill style={{overflow: 'hidden', filter: 'saturate(.8) contrast(1.055) brightness(.95) sepia(.045)'}}>

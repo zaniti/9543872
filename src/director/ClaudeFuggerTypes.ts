@@ -9,6 +9,8 @@ export type ClaudeFuggerAsset = {
   objectPosition: string;
   /** Zoom anchor (the face) for regular stills. */
   zoomOrigin?: string;
+  /** A subject too tall or wide for the frame: the crop slides between these object-positions. */
+  pan?: {from: string; to: string};
   /** Exact source ranges for a video beat, played back to back. */
   videoRanges?: {trimBefore: number; durationFrames: number}[];
   /** Pre-cut, pre-framed 1920x1080 clips (media engine), played back to back. */
