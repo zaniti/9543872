@@ -1,6 +1,6 @@
 import React from 'react';
-import {AbsoluteFill, interpolate, useCurrentFrame} from 'remotion';
-import {CRIMSON, RED, clamp, textBase} from './channelStyle';
+import {AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {CRIMSON, RED, TEXT_RED, clamp, textBase} from './channelStyle';
 import {Background} from './VariantTemplates';
 import type {TemplateTiming} from './templateMotion';
 
@@ -12,6 +12,11 @@ import type {TemplateTiming} from './templateMotion';
  *   T1c  lower third   the place in white bottom-left, a channel-colour rule drawn under it, the year at its end
  *   T1d  big year      the year huge on the left, the place on a channel-colour bar under it
  *   T1e  coordinates   the place's coordinates ticking in, the place under them, the year in a small block
+ *   T1f  locator map   a small printed-atlas map card zooms toward the place, a dot and a hand-drawn ring mark it
+ *   T1g  rewind        a big year counter runs back from today and settles on the year; "78 years ago" and the place
+ *   T1h  letterbox     black cinema bars close in; the place spaced out in the top bar, the year in the bottom one
+ *   T1i  dateline      a news-wire dateline types across a dark strip at the top ("PLACE, REGION — 1 DECEMBER 1948")
+ *   T1j  stamp         a rubber stamp in the channel colour lands on the frame: the place and the date, rough ink
  */
 type Bg = {background: string; backgroundVideo?: string; backgroundPosition?: string} & TemplateTiming;
 const WHITE = '#fffdf7';
@@ -119,5 +124,155 @@ export const Coordinates: React.FC<Bg & {place: string; year?: string; coords?: 
           <Pop text={year} frame={f} start={placeAt + place.length + 4} style={{...textBase, color: WHITE, fontWeight: 700, fontSize: 44, lineHeight: 1}} />
         </span></div> : null}
     </div>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ shared: coordinates
+
+/** "34°59′ S · 138°31′ E" (or "34.98 S, 138.52 E") -> [lat, lon]; null when it can't be read. */
+export const parseCoords = (c: string): [number, number] | null => {
+  const parts = [...c.matchAll(/(\d+(?:\.\d+)?)\s*°?\s*(?:(\d+(?:\.\d+)?)\s*['′]?)?\s*([NSEW])/gi)];
+  if (parts.length < 2) return null;
+  const val = (m: RegExpMatchArray) => (Number(m[1]) + (m[2] ? Number(m[2]) / 60 : 0)) * (/[SW]/i.test(m[3]) ? -1 : 1);
+  const lat = parts.find((m) => /[NS]/i.test(m[3])), lon = parts.find((m) => /[EW]/i.test(m[3]));
+  return lat && lon ? [val(lat), val(lon)] : null;
+};
+
+// ------------------------------------------------------------------ T1f: locator map
+
+const MAP_W = 8192, MAP_H = 4096;  // templates/worldmap.jpg, equirectangular
+
+export const LocatorMap: React.FC<Bg & {place: string; year?: string; coords?: string; span?: number}> = ({background, backgroundVideo, backgroundPosition = '50% 50%', place, year = '', coords = '', span = 40, revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const ll = parseCoords(coords) ?? [0, 0];
+  const CW = 560, CH = 360;  // the map card
+  // the card shows `span` degrees of longitude around the place at first, then pushes in to a third of that
+  const zoom = interpolate(f, [4, 40], [1, 2.6], {...clamp, easing: Easing.out(Easing.cubic)});
+  const pxPerDeg = (CW / span) * zoom;
+  const scale = pxPerDeg / (MAP_W / 360);
+  const mx = (ll[1] + 180) / 360 * MAP_W * scale, my = (90 - ll[0]) / 180 * MAP_H * scale;
+  const ring = interpolate(f, [26, 44], [0, 1], clamp);
+  const r = 26;
+  const circ = 2 * Math.PI * r * 1.15;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <div style={{position: 'absolute', left: 140, bottom: 150, clipPath: wipe(f, 0, 8)}}>
+      <div style={{width: CW, height: CH, position: 'relative', overflow: 'hidden', border: `8px solid ${PAPER}`, boxShadow: '0 10px 28px rgba(0,0,0,.45)',
+        backgroundImage: `url(${staticFile('templates/worldmap.jpg')})`, backgroundRepeat: 'no-repeat',
+        backgroundSize: `${MAP_W * scale}px ${MAP_H * scale}px`, backgroundPosition: `${CW / 2 - mx}px ${CH / 2 - my}px`}}>
+        <svg width={CW} height={CH} style={{position: 'absolute', inset: 0}}>
+          {f >= 22 ? <circle cx={CW / 2} cy={CH / 2} r={9} fill={RED} stroke={WHITE} strokeWidth={3} /> : null}
+          <circle cx={CW / 2} cy={CH / 2} r={r} fill="none" stroke={RED} strokeWidth={6} strokeLinecap="round"
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - ring)} transform={`rotate(-100 ${CW / 2} ${CH / 2})`} />
+        </svg>
+      </div>
+      <div style={{display: 'flex', alignItems: 'center', gap: 16, marginTop: 18}}>
+        <Pop text={place} frame={f} start={30} style={{...textBase, color: WHITE, fontWeight: 700, fontSize: 60, lineHeight: 1,
+          textShadow: '0 3px 14px rgba(0,0,0,.6)'}} />
+        {year ? <span style={{display: 'inline-flex', background: CRIMSON, borderRadius: 6, padding: '8px 16px', clipPath: wipe(f, 34 + place.length, 40 + place.length)}}>
+          <Pop text={year} frame={f} start={36 + place.length} style={{...textBase, color: WHITE, fontWeight: 700, fontSize: 40, lineHeight: 1}} />
+        </span> : null}
+      </div>
+    </div>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T1g: rewind
+
+export const Rewind: React.FC<Bg & {place: string; year: string; now?: number; agoLabel?: string}> = ({background, backgroundVideo, backgroundPosition = '50% 50%', place, year, now = new Date().getFullYear(), agoLabel = 'years ago', revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const target = Number(year) || now;
+  // runs back fast, then slows and settles (a counter, not a fade)
+  const shown = Math.round(interpolate(f, [2, 46], [now, target], {...clamp, easing: Easing.out(Easing.cubic)}));
+  const settled = f >= 46;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <div style={{position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,.52) 0%, rgba(0,0,0,.2) 55%, rgba(0,0,0,0) 80%)'}} />
+    <div style={{position: 'absolute', left: 140, top: 250, display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+      <div style={{...textBase, color: settled ? WHITE : 'rgba(255,253,247,.86)', fontWeight: 700, fontSize: 280, letterSpacing: -8, lineHeight: .9,
+        fontVariantNumeric: 'tabular-nums', textShadow: '0 6px 26px rgba(0,0,0,.45)', opacity: f >= 2 ? 1 : 0}}>{shown}</div>
+      <div style={{display: 'flex', alignItems: 'center', gap: 18, marginTop: 24, marginLeft: 10}}>
+        <span style={{display: 'inline-flex', background: RED, borderRadius: 8, padding: '16px 28px', clipPath: wipe(f, 48, 58)}}>
+          <Pop text={place.toUpperCase()} frame={f} start={52} style={{...textBase, color: WHITE, fontWeight: 700, fontSize: 52, letterSpacing: 4, lineHeight: 1}} />
+        </span>
+        {now > target ? <Pop text={`${now - target} ${agoLabel}`} frame={f} start={56 + place.length} style={{...textBase, color: WHITE, fontWeight: 700,
+          fontSize: 40, letterSpacing: 2, lineHeight: 1, textShadow: '0 3px 12px rgba(0,0,0,.6)'}} /> : null}
+      </div>
+    </div>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T1h: letterbox
+
+export const Letterbox: React.FC<Bg & {place: string; year?: string; region?: string}> = ({background, backgroundVideo, backgroundPosition = '50% 50%', place, year = '', region = '', revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const bar = interpolate(f, [0, 8], [0, 150], clamp);  // straight in, no easing: a hard cinema matte
+  const spaced: React.CSSProperties = {...textBase, color: WHITE, fontWeight: 700, letterSpacing: 14, lineHeight: 1};
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <div style={{position: 'absolute', left: 0, right: 0, top: 0, height: bar, background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+      <Pop text={place.toUpperCase()} frame={f} start={10} style={{...spaced, fontSize: 48}} />
+    </div>
+    <div style={{position: 'absolute', left: 0, right: 0, bottom: 0, height: bar, background: '#050505', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', gap: 28}}>
+      {region ? <Pop text={region.toUpperCase()} frame={f} start={14 + place.length} style={{...spaced, fontSize: 30, color: 'rgba(255,253,247,.75)'}} /> : null}
+      {region && year ? <span style={{width: 40, height: 4, background: RED, clipPath: wipe(f, 16 + place.length, 22 + place.length)}} /> : null}
+      {year ? <Pop text={year} frame={f} start={18 + place.length} style={{...spaced, fontSize: 42, letterSpacing: 10}} /> : null}
+    </div>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T1i: dateline
+
+export const Dateline: React.FC<Bg & {place: string; year?: string; date?: string}> = ({background, backgroundVideo, backgroundPosition = '50% 50%', place, year = '', date = '', revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const line = `${place.toUpperCase()} — ${(date || year).toUpperCase()}`;
+  const typed = Math.max(0, Math.min(line.length, Math.floor((f - 8) * 1.5)));  // a teleprinter: about 45 letters a second
+  const caret = typed < line.length || Math.floor(f / 8) % 2 === 0;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <div style={{position: 'absolute', left: 0, right: 0, top: 90, height: 110, background: 'rgba(8,8,8,.78)', clipPath: wipe(f, 0, 8)}}>
+      <div style={{position: 'absolute', left: 0, top: 0, bottom: 0, width: 16, background: RED}} />
+      <div style={{position: 'absolute', left: 140, top: 0, bottom: 0, display: 'flex', alignItems: 'center', ...textBase, color: WHITE,
+        fontWeight: 700, fontSize: 46, letterSpacing: 5, whiteSpace: 'pre'}}>
+        {line.slice(0, typed)}<span style={{display: 'inline-block', width: 24, height: 46, marginLeft: 6, background: caret && f >= 8 ? TEXT_RED : 'transparent'}} />
+      </div>
+    </div>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T1j: stamp
+
+export const Stamp: React.FC<Bg & {place: string; year?: string; date?: string}> = ({background, backgroundVideo, backgroundPosition = '50% 50%', place, year = '', date = '', revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const hit = 10;  // the frame the stamp lands
+  const s = f < hit ? 1.5 : f < hit + 3 ? interpolate(f, [hit, hit + 3], [1.08, 1], clamp) : 1;
+  const ink = RED;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <svg width={0} height={0} style={{position: 'absolute'}}>
+      <filter id="stampInk" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves={2} seed={4} result="n" />
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.3 1.5" result="holes" />
+        <feComposite in="SourceGraphic" in2="holes" operator="in" result="inked" />
+        <feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves={1} seed={9} result="w" />
+        <feDisplacementMap in="inked" in2="w" scale={5} />
+      </filter>
+    </svg>
+    {f >= hit - 2 ? <div style={{position: 'absolute', right: 150, top: 150, transform: `scale(${s})`, transformOrigin: 'center', opacity: f >= hit ? .95 : 0,
+      filter: 'url(#stampInk) drop-shadow(0 2px 6px rgba(0,0,0,.25))'}}>
+      <div style={{border: `9px solid ${ink}`, padding: 8}}>
+        <div style={{border: `3px solid ${ink}`, padding: '18px 40px 16px', textAlign: 'center'}}>
+          <div style={{...textBase, color: ink, fontWeight: 700, fontSize: 78, letterSpacing: 6, lineHeight: 1}}>{place.toUpperCase()}</div>
+          <div style={{height: 4, background: ink, margin: '14px 0 12px'}} />
+          <div style={{...textBase, color: ink, fontWeight: 700, fontSize: 48, letterSpacing: 8, lineHeight: 1}}>{(date || year).toUpperCase()}</div>
+        </div>
+      </div>
+    </div> : null}
   </AbsoluteFill>;
 };

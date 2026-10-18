@@ -16,7 +16,7 @@ import {TwoPhotoHeading} from './TwoPhotoHeading';
 import {CompareBars, TimelineStrip, type CompareRow, type TimelineEvent} from './NewTemplates';
 import {DocumentMark, MapCircle, PhotoBurst, SentenceMarker, StatementPaper} from './VariantTemplates';
 import {DocumentPair, MapPair, PaperPrints, PhotoLabels, SourceCard} from './OriginalTemplates';
-import {BigYear, Coordinates, LowerThird, PaperStrip} from './OpenerTemplates';
+import {BigYear, Coordinates, Dateline, Letterbox, LocatorMap, LowerThird, PaperStrip, Rewind, Stamp} from './OpenerTemplates';
 
 export type Beat = ClaudeFuggerBeat & {revealShift?: number};
 const gridPaper = 'templates/clip6/paper-grid.jpg';
@@ -51,6 +51,11 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T1b': return <PaperStrip background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1c': return <LowerThird background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1d': return <BigYear background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1f': return <LocatorMap background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} coords={s('coords')} span={Number(t.span) || 40} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1g': return <Rewind background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} agoLabel={s('ago') || undefined} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1h': return <Letterbox background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} region={s('region')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1i': return <Dateline background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} date={s('date')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1j': return <Stamp background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} date={s('date')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1e': return <Coordinates background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} coords={s('coords')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T2': return <BalfourTag background={a.src} backgroundVideo={a.videoParts?.[0]?.src} title={s('title')} year="" backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
     case 'T3': return <PortraitYearTag background={a.src} year={s('year')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
