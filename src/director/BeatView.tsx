@@ -16,6 +16,7 @@ import {TwoPhotoHeading} from './TwoPhotoHeading';
 import {CompareBars, TimelineStrip, type CompareRow, type TimelineEvent} from './NewTemplates';
 import {DocumentMark, MapCircle, PhotoBurst, SentenceMarker, StatementPaper} from './VariantTemplates';
 import {DocumentPair, MapPair, PaperPrints, PhotoLabels, SourceCard} from './OriginalTemplates';
+import {BigYear, Coordinates, LowerThird, PaperStrip} from './OpenerTemplates';
 
 export type Beat = ClaudeFuggerBeat & {revealShift?: number};
 const gridPaper = 'templates/clip6/paper-grid.jpg';
@@ -47,6 +48,10 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
   const bgPos = a?.objectPosition ?? '50% 50%';
   switch (beat.mode) {
     case 'T1': return <BalfourTag background={a.src} backgroundVideo={a.videoParts?.[0]?.src} title={s('title')} year={s('year')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1b': return <PaperStrip background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1c': return <LowerThird background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1d': return <BigYear background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1e': return <Coordinates background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} coords={s('coords')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T2': return <BalfourTag background={a.src} backgroundVideo={a.videoParts?.[0]?.src} title={s('title')} year="" backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
     case 'T3': return <PortraitYearTag background={a.src} year={s('year')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
     case 'T5': return <PortraitFeatureCard background={a.src} portrait={b.src} label={s('label')} sourceNote="" backgroundLayout="cover" backgroundPosition={bgPos} portraitPosition={b.objectPosition} revealShift={shift} />;
