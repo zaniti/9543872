@@ -17,6 +17,8 @@ import {CompareBars, TimelineStrip, type CompareRow, type TimelineEvent} from '.
 import {DocumentMark, MapCircle, PhotoBurst, SentenceMarker, StatementPaper} from './VariantTemplates';
 import {DocumentPair, MapPair, PaperPrints, PhotoLabels, SourceCard} from './OriginalTemplates';
 import {BigYear, Coordinates, Dateline, Letterbox, LocatorMap, LowerThird, PaperStrip, Rewind, Stamp} from './OpenerTemplates';
+import {StoryPhoto, type StoryShot, type StoryTag} from './StoryPhoto';
+import {EvidenceBoard, FreezeFrame, MapDive, Spotlight, Triptych, type Spot} from './MotionPieces';
 
 export type Beat = ClaudeFuggerBeat & {revealShift?: number};
 const gridPaper = 'templates/clip6/paper-grid.jpg';
@@ -72,6 +74,14 @@ export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T22b': return <StatementPaper background={a.src} backgroundVideo={a.videoParts?.[0]?.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T11b': return <SentenceMarker background={a.src} backgroundVideo={a.videoParts?.[0]?.src} sentence={s('sentence')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T26': return <MapCircle background={a.src} backgroundVideo={a.videoParts?.[0]?.src} map={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} label={s('label')} markerColor={beat.data?.markerColor as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T28': return <StoryPhoto src={a.src} aspect={a.aspectRatio} shots={(beat.data?.shots as StoryShot[]) ?? []} tags={(beat.data?.tags as StoryTag[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} />;
+    // motion pieces (MotionPieces.tsx): one picture or film told in several moves, for the opening
+    case 'T29': return <StoryPhoto src={a.src} aspect={a.aspectRatio} shots={(beat.data?.shots as StoryShot[]) ?? []} tags={(beat.data?.tags as StoryTag[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} move={50} focusPull />;
+    case 'T30': return <Spotlight src={a.src} aspect={a.aspectRatio} spots={(beat.data?.spots as Spot[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T31': return <EvidenceBoard items={beat.assets.map((x, i) => ({src: x.src, aspect: x.aspectRatio, label: ((beat.data?.labels as string[]) ?? [])[i]}))} visits={(beat.data?.visits as number[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T32': return <MapDive map={a.src} mapAspect={a.aspectRatio} x={Number(beat.data?.x)} y={Number(beat.data?.y)} place={s('place')} photo={b?.src} photoAspect={b?.aspectRatio} video={b?.videoParts?.[0]?.src} diveAt={Number(beat.data?.diveAt ?? 20)} landAt={Number(beat.data?.landAt ?? 80)} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T33': return <FreezeFrame video={a.videoParts?.[0]?.src ?? a.src} freezeAt={Number(beat.data?.freezeAt ?? 30)} x={Number(beat.data?.x ?? 50)} y={Number(beat.data?.y ?? 40)} w={beat.data?.w as number | undefined} text={s('name')} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T34': return <Triptych panels={beat.assets.map((x, i) => ({src: x.src, position: x.objectPosition, at: ((beat.data?.at as number[]) ?? [])[i] ?? i * 12, label: ((beat.data?.labels as string[]) ?? [])[i]}))} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T27': return <DocumentMark background={a.src} backgroundVideo={a.videoParts?.[0]?.src} doc={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} marker={beat.data?.marker as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
     // the owner's reference templates 4, 12, 13, 15, 17, 20: every picture is a card (documents and maps pre-trimmed)
     case 'T4': return <PaperPrints photos={beat.assets.map((x) => x.src)} positions={beat.assets.map((x) => x.objectPosition)} durationFrames={beat.durationFrames} revealShift={shift} />;

@@ -1,0 +1,105 @@
+import React from 'react';
+import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {CREAM, RED, clamp, textBase} from './channelStyle';
+
+/**
+ * T28 "story photo" (the owner's reference: a hook that tells one strong picture in several shots, 2026-10-21).
+ * One photo stays on screen while the camera travels over it: wide, then in on a person, across to another, closer on a
+ * detail, each move landing on the word that names it. Red tags with an arrow name people and things on their word.
+ *
+ * shots: where the camera looks, from frame `at`: centre (cx, cy) and visible width w, all in % of the photo.
+ * tags:  a red tag pointing at (x, y) in % of the photo, from frame `at` until `until` (default: to the end).
+ *
+ * The camera, the tag and the photo view are shared with the other motion pieces (MotionPieces.tsx).
+ */
+export type StoryShot = {at: number; cx: number; cy: number; w: number};
+export type StoryTag = {at: number; until?: number; text: string; x: number; y: number};
+
+const MOVE = 26; // frames for the camera to travel to the next shot
+export const FRAME_W = 1920, FRAME_H = 1080;
+
+export const camera = (shots: StoryShot[], f: number, move = MOVE) => {
+  const list = shots.length ? [...shots].sort((a, b) => a.at - b.at) : [{at: 0, cx: 50, cy: 50, w: 100}];
+  let {cx, cy, w} = list[0];
+  for (const s of list.slice(1)) {
+    const p = interpolate(f, [s.at, s.at + move], [0, 1], {...clamp, easing: Easing.inOut(Easing.cubic)});
+    if (p <= 0) break;
+    cx += (s.cx - cx) * p;
+    cy += (s.cy - cy) * p;
+    w = Math.exp(Math.log(w) + (Math.log(s.w) - Math.log(w)) * p); // zoom feels even when eased in log space
+  }
+  return {cx, cy, w};
+};
+
+/** Where a photo sits on screen for a camera (cx, cy, w in % of the photo), never showing past its edges. */
+export const photoView = (aspect: number, cam: {cx: number; cy: number; w: number}, drift = 0) => {
+  const wMax = Math.min(100, (100 * FRAME_W) / (FRAME_H * aspect)); // wider than this would show the edges
+  const w = Math.min(wMax, cam.w * (1 - drift));
+  const W = FRAME_W / (w / 100), H = W / aspect;
+  const left = Math.min(0, Math.max(FRAME_W - W, FRAME_W / 2 - (cam.cx / 100) * W));
+  const top = Math.min(0, Math.max(FRAME_H - H, FRAME_H / 2 - (cam.cy / 100) * H));
+  // the picture is laid out once, large, and only moved and scaled down by a transform: sub-pixel smooth (moving it
+  // by left/top/width/height snaps to whole pixels every frame and the slow moves shake), and never scaled up (sharp)
+  const baseW = FRAME_W * 3;
+  const style: React.CSSProperties = {position: 'absolute', left: 0, top: 0, width: baseW, height: baseW / aspect, maxWidth: 'none',
+    transform: `translate(${left}px, ${top}px) scale(${W / baseW})`, transformOrigin: '0 0'};
+  return {left, top, W, H, style, toScreen: (x: number, y: number) => [left + (x / 100) * W, top + (y / 100) * H] as [number, number]};
+};
+
+/** A red tag with a hand-drawn arrow to a point on screen (px, py); `t` = frames since it appeared. */
+/** `settledX`: where the point is on screen once the camera has stopped; the tag picks its side from it once, so it never
+ *  jumps from one side to the other while the camera is still moving. */
+export const PointerTag: React.FC<{px: number; py: number; text: string; t: number; opacity?: number; settledX?: number}> = ({px, py, text, t, opacity = 1, settledX}) => {
+  // a tag only points at what is on screen (the build rejects a tag whose point is outside its shot)
+  if (t < 0 || opacity <= 0 || px < 80 || px > FRAME_W - 80 || py < 80 || py > FRAME_H - 80) return null;
+  const show = interpolate(t, [0, 8], [0, 1], {...clamp, easing: Easing.out(Easing.back(1.6))});
+  const o = Math.min(show, opacity);
+  // the tag sits above the point, on the side facing the middle of the screen, never off screen
+  const right = (settledX ?? px) > FRAME_W / 2;
+  const tagW = 26 * text.length + 60;
+  const tx = Math.max(40, Math.min(FRAME_W - tagW - 40, right ? px - tagW - 170 : px + 170));
+  const ty = Math.max(40, Math.min(FRAME_H - 120, py - 210));
+  const ax = right ? tx + tagW : tx, ay = ty + 38; // where the arrow leaves the tag
+  const draw = interpolate(t, [4, 18], [0, 1], clamp);
+  const gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point
+  const mx = (ax + gx) / 2, my = Math.min(ay, gy) - 60; // a gentle curve
+  const ang = Math.atan2(gy - my, gx - mx);
+  return <>
+    <svg width={FRAME_W} height={FRAME_H} style={{position: 'absolute', inset: 0, opacity: o}}>
+      <path d={`M ${ax} ${ay} Q ${mx} ${my} ${gx} ${gy}`} fill="none" stroke={CREAM} strokeWidth={5} strokeLinecap="round"
+        pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))'}} />
+      {draw >= 1 ? <path d={`M ${gx} ${gy} l ${-22 * Math.cos(ang - 0.45)} ${-22 * Math.sin(ang - 0.45)} M ${gx} ${gy} l ${-22 * Math.cos(ang + 0.45)} ${-22 * Math.sin(ang + 0.45)}`}
+        stroke={CREAM} strokeWidth={5} strokeLinecap="round" fill="none" /> : null}
+    </svg>
+    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={right ? 'right center' : 'left center'} />
+  </>;
+};
+
+export const RedTag: React.FC<{text: string; left: number; top: number; show: number; opacity?: number; origin?: string; size?: number}> = ({text, left, top, show, opacity = 1, origin = 'left center', size = 44}) =>
+  <div style={{position: 'absolute', left: 0, top: 0, background: RED, color: CREAM, ...textBase, fontWeight: 800, fontSize: size,
+    padding: '10px 26px', borderRadius: 6, whiteSpace: 'nowrap', opacity: Math.min(opacity, show),
+    transform: `translate(${left}px, ${top}px) scale(${0.7 + 0.3 * show})`, // a transform, not left/top: moves smoothly
+    transformOrigin: origin, boxShadow: '0 8px 20px rgba(0,0,0,.45)'}}>{text}</div>;
+
+export const tagOpacity = (f: number, until: number) => interpolate(f, [until - 6, until], [1, 0], clamp);
+
+export const StoryPhoto: React.FC<{src: string; aspect: number; shots: StoryShot[]; tags?: StoryTag[]; durationFrames: number; revealShift?: number;
+  move?: number; focusPull?: boolean}> = ({src, aspect, shots, tags = [], durationFrames, revealShift = 0, move = MOVE, focusPull = false}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const cam = camera(shots, f, move);
+  // a slow drift inside every shot so the picture never stops moving
+  const v = photoView(aspect, cam, 0.00045 * Math.max(0, clock));
+  // detail reveal: the first detail starts soft and comes into focus, a dark vignette lifts as the camera pulls back
+  const blur = focusPull ? interpolate(f, [0, 10], [3, 0], clamp) : 0; // on screen, in pixels: a light focus pull
+  const vignette = focusPull ? interpolate(cam.w, [20, 90], [0.75, 0.2], clamp) : 0;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Img src={staticFile(src)} style={{...v.style, filter: blur ? `blur(${blur / (v.W / (FRAME_W * 3))}px)` : undefined}} />
+    {vignette ? <AbsoluteFill style={{background: `radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,${vignette}) 100%)`}} /> : null}
+    {tags.map((t, i) => {
+      const [px, py] = v.toScreen(t.x, t.y);
+      const [settledX] = photoView(aspect, camera(shots, t.at + move + 6, move)).toScreen(t.x, t.y);
+      return <PointerTag key={i} px={px} py={py} settledX={settledX} text={t.text} t={f - t.at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
+    })}
+  </AbsoluteFill>;
+};
