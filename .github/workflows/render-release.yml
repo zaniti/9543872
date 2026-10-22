@@ -232,6 +232,17 @@ jobs:
             --concurrency="${{ steps.detect.outputs.safe_concurrency }}" \
             --scale="${{ inputs.render_scale }}"
 
+      - name: Apply the channel look
+        # director videos whose channel has a look: RGB split, soft corners and vignette, in seconds per minute of video
+        # (drawing them in the browser would double the render). No look in the package = nothing happens.
+        run: |
+          if [ -f public/director_edit.json ] && python3 -c "import json,sys; l=(json.load(open('public/director_edit.json')).get('theme') or {}).get('look') or {}; sys.exit(0 if l.get('post') else 1)"; then
+            command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null)
+            python3 scripts/look_post.py "out/${{ matrix.stem }}_chunk_${{ matrix.chunk_number }}.mp4" public/director_edit.json
+          else
+            echo "look: none for this video"
+          fi
+
       - name: Upload rendered chunk
         uses: actions/upload-artifact@v4
         with:
