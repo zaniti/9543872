@@ -142,7 +142,7 @@ export const PortraitOnScene: React.FC<Bg & {portrait: string; portraitAspect?: 
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
     <AbsoluteFill style={{background: '#000', opacity: 0.42 * easeOut(f, 0, 12)}} />
-    <div style={{position: 'absolute', left: 960 - W / 2, top: 540 - H / 2, opacity: Math.min(1, p * 1.4), transform: `translateY(${(1 - p) * 140}px) rotate(${-1.2 * p}deg)`,
+    <div style={{position: 'absolute', left: 960 - W / 2, top: 540 - H / 2, opacity: Math.min(1, p * 1.4), transform: `translateY(${(1 - p) * 140}px)`,
       filter: p < 1 ? `blur(${(1 - p) * 6}px)` : undefined}}>
       <TornPrint src={portrait} w={w} h={h} position={portraitPosition} name={name} nameAt={20} nameSize={42} f={f} seed={11} />
     </div>
@@ -283,12 +283,12 @@ export const TwoPeopleRef: React.FC<{first: string; second: string; firstAspect?
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const H = 560;
-  const card = (src: string, aspect: number, pos: string | undefined, name: string, cx: number, at: number, seed: number, tilt: number) => {
+  const card = (src: string, aspect: number, pos: string | undefined, name: string, cx: number, at: number, seed: number, _tilt: number) => {
     const w = Math.round(Math.max(400, Math.min(500, H * aspect)));
     const W = w + 2 * Math.round(w * 0.04), Hc = H + Math.round(w * 0.04) + Math.round(40 * 2.6);
     const p = interpolate(f, [at, at + 12], [0, 1], {...clamp, easing: Easing.out(Easing.cubic)});
     if (f < at) return null;
-    return <div style={{position: 'absolute', left: cx - W / 2, top: 540 - Hc / 2, opacity: Math.min(1, p * 1.4), transform: `translateY(${(1 - p) * 140}px) rotate(${tilt * p}deg)`,
+    return <div style={{position: 'absolute', left: cx - W / 2, top: 540 - Hc / 2, opacity: Math.min(1, p * 1.4), transform: `translateY(${(1 - p) * 140}px)`,
       filter: p < 1 ? `blur(${(1 - p) * 6}px)` : undefined}}>
       <TornPrint src={src} w={w} h={H} position={pos} name={name} nameAt={at + 10} nameSize={40} f={f} seed={seed} />
     </div>;
