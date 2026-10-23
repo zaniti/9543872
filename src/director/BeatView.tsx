@@ -3,17 +3,15 @@ import {AbsoluteFill, Easing, OffthreadVideo, Sequence, interpolate, staticFile,
 import type {ClaudeFuggerBeat} from './ClaudeFuggerTypes';
 import {MetricPortraitCard} from './MetricPortraitCard';
 import {RegularPhotoZoom} from './RegularPhotoZoom';
-import {RelationshipPolaroids} from './RelationshipPolaroids';
 import {StatementOverlay} from './StatementOverlay';
-import {StatisticOverlay} from './StatisticOverlay';
 import {TwoPhotoHeading} from './TwoPhotoHeading';
 import {TimelineStrip, type TimelineEvent} from './NewTemplates';
 import {DocumentMark, MapCircle, SentenceMarker, StatementPaper} from './VariantTemplates';
-import {DocumentPair, MapPair, PhotoLabels} from './OriginalTemplates';
-import {BigYear, Letterbox, LocatorMap, LowerThird, PaperStrip, Rewind} from './OpenerTemplates';
+import {DocumentPair, MapPair} from './OriginalTemplates';
+import {Letterbox, LocatorMap, LowerThird, PaperStrip} from './OpenerTemplates';
 import {StoryPhoto, type StoryShot, type StoryTag} from './StoryPhoto';
 import {Badge, ChainBoard, KeywordChips, YearTagRef} from './RefKit';
-import {CoordinatesRef, DatelineRef, DocumentOverScene, PhotoBurstRef, PlaceYearRef, PortraitOnScene, StampRef} from './RefKit4';
+import {CoordinatesRef, DatelineRef, DocumentOverScene, LabelsOnPhotoRef, PhotoBurstRef, PlaceBigYearRef, PlaceYearRef, PortraitOnScene, StampRef, TwoPeopleRef, YearsAgoRef} from './RefKit4';
 import {CutoutScene, FlowMap, RegionsMap, StackedLines} from './RefKit3';
 import {BarsOnPaper, BetweenTwo, BigYearRef, DocumentQuote, FigureOnPaper, NumberedSteps, PercentRef, PortraitPrint, PrintsOnPaper, SentenceRef, ThenToday, type BarRow} from './RefKit2';
 import {EvidenceBoard, FreezeFrame, MapDive, PathTrace, Spotlight, Triptych, type PathPoint, type Spot} from './MotionPieces';
@@ -50,9 +48,9 @@ const BeatInner: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T1': return <PlaceYearRef background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1b': return <PaperStrip background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1c': return <LowerThird background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T1d': return <BigYear background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1d': return <PlaceBigYearRef background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1f': return <LocatorMap background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} coords={s('coords')} span={Number(t.span) || 40} backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T1g': return <Rewind background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} agoLabel={s('ago') || undefined} backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T1g': return <YearsAgoRef background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} agoLabel={s('ago') || undefined} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1h': return <Letterbox background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} region={s('region')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1i': return <DatelineRef background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} date={s('date')} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T1j': return <StampRef background={a.src} backgroundVideo={a.videoParts?.[0]?.src} place={s('title')} year={s('year')} date={s('date')} backgroundPosition={bgPos} revealShift={shift} />;
@@ -82,15 +80,15 @@ const BeatInner: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T5': return <PortraitOnScene background={a.src} backgroundVideo={a.videoParts?.[0]?.src} backgroundPosition={bgPos} portrait={b.src} portraitAspect={b.aspectRatio} portraitPosition={b.objectPosition} name={s('label')} revealShift={shift} />;
     case 'T6': return <MetricPortraitCard paper={gridPaper} portrait={a.src} portraitPosition={a.objectPosition} firstLead={s('firstLead')} firstEmphasis={s('firstEmphasis')} firstTail="" secondLead={s('secondLead')} secondEmphasis={s('secondEmphasis')} secondTail="" zoomDurationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T7': return <PortraitPrint src={a.src} aspect={a.aspectRatio} position={a.objectPosition} name={s('name')} revealShift={shift} />;
-    case 'T8': return <RelationshipPolaroids first={a.src} second={b.src} firstPosition={a.objectPosition} secondPosition={b.objectPosition} firstName={s('nameA')} secondName={s('nameB')} sourceNote="" revealShift={shift} />;
-    case 'T11': return <StatisticOverlay firstBackground={a.src} firstLine={s('firstLine')} emphasis={s('emphasis')} secondLine={s('secondLine')} backgroundLayout="cover" backgroundPosition={bgPos} revealShift={shift} />;
+    case 'T8': return <TwoPeopleRef first={a.src} second={b.src} firstAspect={a.aspectRatio} secondAspect={b.aspectRatio} firstPosition={a.objectPosition} secondPosition={b.objectPosition} nameA={s('nameA')} nameB={s('nameB')} revealShift={shift} />;
+    case 'T11': return <SentenceRef keyAt={beat.data?.keyAt as (number | null)[] | undefined} background={a.src} position={bgPos} sentence={[s('firstLine'), s('emphasis') ? `*${s('emphasis')}*` : '', s('secondLine')].filter(Boolean).join(' ')} revealShift={shift} />;
     case 'T14': return <PercentRef background={a.src} position={bgPos} percent={Number(t.percent)} label={(s('label') || s('copy')).replace(/\*/g, '') || undefined} year={s('year') || undefined} revealShift={shift} />;
     case 'T16': return <PrintsOnPaper items={beat.assets.map((x) => ({src: x.src, aspect: x.aspectRatio, position: x.objectPosition}))} at={beat.data?.at as number[] | undefined} layout={beat.data?.layout as 'row' | 'portrait' | undefined} revealShift={shift} />;
     case 'T18': return <TwoPhotoHeading first={a.src} second={b.src} firstPosition={a.objectPosition} secondPosition={b.objectPosition} heading={s('heading')} firstLabel={s('labelA')} secondLabel={s('labelB')} revealShift={shift} />;
     case 'T22': return <StatementOverlay background={a.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
     // second designs and new kinds: background = a photo or a film clip (bgfilm); the map / document is the last card
-    case 'T22b': return <StatementPaper background={a.src} backgroundVideo={a.videoParts?.[0]?.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
-    case 'T11b': return a.videoParts?.length ? <SentenceMarker background={a.src} backgroundVideo={a.videoParts?.[0]?.src} sentence={s('sentence')} backgroundPosition={bgPos} revealShift={shift} /> : <SentenceRef background={a.src} position={bgPos} sentence={s('sentence')} revealShift={shift} />;
+    case 'T22b': return <StatementPaper background={a.src} backgroundVideo={a.videoParts?.[0]?.src} statement={s('statement')} backgroundPosition={bgPos} keyAt={beat.data?.keyAt as (number | null)[] | undefined} revealShift={shift} />;
+    case 'T11b': return a.videoParts?.length ? <SentenceMarker background={a.src} backgroundVideo={a.videoParts?.[0]?.src} sentence={s('sentence')} backgroundPosition={bgPos} revealShift={shift} /> : <SentenceRef keyAt={beat.data?.keyAt as (number | null)[] | undefined} background={a.src} position={bgPos} sentence={s('sentence')} revealShift={shift} />;
     case 'T26': return <MapCircle background={a.src} backgroundVideo={a.videoParts?.[0]?.src} map={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} label={s('label')} markerColor={beat.data?.markerColor as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
     case 'T28': return <StoryPhoto src={a.src} aspect={a.aspectRatio} shots={(beat.data?.shots as StoryShot[]) ?? []} tags={(beat.data?.tags as StoryTag[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} />;
     // motion pieces (MotionPieces.tsx): one picture or film told in several moves, for the opening
@@ -98,7 +96,7 @@ const BeatInner: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T30': return <Spotlight src={a.src} aspect={a.aspectRatio} spots={(beat.data?.spots as Spot[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T31': return <EvidenceBoard items={beat.assets.map((x, i) => ({src: x.src, aspect: x.aspectRatio, label: ((beat.data?.labels as string[]) ?? [])[i]}))} visits={(beat.data?.visits as number[]) ?? []} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T32': return <MapDive map={a.src} mapAspect={a.aspectRatio} x={Number(beat.data?.x)} y={Number(beat.data?.y)} place={s('place')} photo={b?.src} photoAspect={b?.aspectRatio} video={b?.videoParts?.[0]?.src} diveAt={Number(beat.data?.diveAt ?? 20)} landAt={Number(beat.data?.landAt ?? 80)} durationFrames={beat.durationFrames} revealShift={shift} />;
-    case 'T33': return <FreezeFrame video={a.videoParts?.[0]?.src ?? a.src} freezeAt={Number(beat.data?.freezeAt ?? 30)} x={Number(beat.data?.x ?? 50)} y={Number(beat.data?.y ?? 40)} w={beat.data?.w as number | undefined} text={s('name')} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T33': return <FreezeFrame video={a.videoParts?.[0]?.src ?? a.src} freezeAt={Number(beat.data?.freezeAt ?? 30)} x={Number(beat.data?.x ?? 50)} y={Number(beat.data?.y ?? 40)} w={beat.data?.w as number | undefined} face={beat.data?.face as [number, number, number, number] | undefined} text={s('name')} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T34': return <Triptych panels={beat.assets.map((x, i) => ({src: x.src, position: x.objectPosition, at: ((beat.data?.at as number[]) ?? [])[i] ?? i * 12, label: ((beat.data?.labels as string[]) ?? [])[i]}))} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T35': return <PathTrace src={a.src} aspect={a.aspectRatio} points={(beat.data?.points as PathPoint[]) ?? []} follow={beat.data?.follow as number | undefined} title={s('title') || undefined} subtitle={s('subtitle') || undefined} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T27': return <DocumentMark background={a.src} backgroundVideo={a.videoParts?.[0]?.src} doc={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number]} marker={beat.data?.marker as string | undefined} backgroundPosition={bgPos} revealShift={shift} />;
@@ -108,7 +106,7 @@ const BeatInner: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T13': return <DocumentOverScene background={a.src} backgroundVideo={a.videoParts?.[0]?.src} backgroundPosition={bgPos} doc={b.src} aspect={b.aspectRatio} box={beat.data?.box as [number, number, number, number] | undefined} marker={beat.data?.marker as string | undefined} revealShift={shift} />;
     case 'T15': return <PhotoBurstRef photos={beat.assets.map((x) => x.src)} positions={beat.assets.map((x) => x.objectPosition)} durationFrames={beat.durationFrames} />;
     case 'T17': return <MapPair first={a.src} second={b.src} aspectA={a.aspectRatio} aspectB={b.aspectRatio} caption={s('caption')} revealShift={shift} />;
-    case 'T20': return <PhotoLabels first={a.src} second={b?.src} firstPosition={a.objectPosition} secondPosition={b?.objectPosition} labelA={s('labelA')} labelB={s('labelB')} durationFrames={beat.durationFrames} revealShift={shift} />;
+    case 'T20': return <LabelsOnPhotoRef first={a.src} second={b?.src} firstPosition={a.objectPosition} secondPosition={b?.objectPosition} labelA={s('labelA')} labelB={s('labelB')} durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T24': return <TimelineStrip heading={s('heading')} events={(beat.data?.events ?? []) as TimelineEvent[]} revealShift={shift} />;
     case 'T25': return <BarsOnPaper heading={s('heading') || undefined} rows={(beat.data?.rows ?? []) as BarRow[]} at={beat.data?.at as number[] | undefined} revealShift={shift} />;
     case 'video': return <EngineClips beat={beat} />;

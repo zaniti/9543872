@@ -139,7 +139,9 @@ export const MapDive: React.FC<{map: string; mapAspect: number; x: number; y: nu
 
 // ------------------------------------------------------------------ T33 Freeze frame
 
-export const FreezeFrame: React.FC<{video: string; freezeAt: number; x: number; y: number; w?: number; text: string; durationFrames: number; revealShift?: number}> = ({video, freezeAt, x, y, w = 38, text, durationFrames, revealShift = 0}) => {
+export const FreezeFrame: React.FC<{video: string; freezeAt: number; x: number; y: number; w?: number; text: string; durationFrames: number; revealShift?: number;
+  /** the face box [x, y, w, h] in % of the 16:9 frame (the build detects it); without one, a typical head around x, y */
+  face?: [number, number, number, number]}> = ({video, freezeAt, x, y, w = 38, text, durationFrames, revealShift = 0, face}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const frozen = f >= freezeAt;
@@ -155,7 +157,9 @@ export const FreezeFrame: React.FC<{video: string; freezeAt: number; x: number; 
     </div>
     <AbsoluteFill style={{background: CREAM, opacity: flash}} />
     {frozen ? <PointerTag px={px} py={py} settledX={photoView(16 / 9, camera([{at: 0, cx: 50, cy: 50, w: 100}, {at: freezeAt + 4, cx: x, cy: y, w}], freezeAt + 40, 22)).toScreen(x, y)[0]}
-      text={text} t={f - freezeAt - 30} opacity={tagOpacity(f, durationFrames + revealShift)} /> : null}
+      text={text} t={f - freezeAt - 30} opacity={tagOpacity(f, durationFrames + revealShift)}
+      // the arrow stops just outside the face, never inside it (the owner, 2026-10-23)
+      face={{rx: ((face?.[2] ?? 9) / 200) * v.W * 0.72, ry: ((face?.[3] ?? 16) / 200) * v.H * 0.85}} side={px <= FRAME_W / 2 ? 'right' : 'left'} /> : null}
   </AbsoluteFill>;
 };
 

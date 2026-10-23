@@ -28,12 +28,15 @@ export const sweep = (p: number, base: string): React.CSSProperties => ({
 });
 
 /** Key words (in *stars*) turn the channel colour one after another, left to right, from frame `start`. */
-const SweepKeys: React.FC<{text: string; frame: number; start: number; base: string}> = ({text, frame, start, base}) => {
+const SweepKeys: React.FC<{text: string; frame: number; start: number; base: string; keyAt?: (number | null)[]}> = ({text, frame, start, base, keyAt = []}) => {
   let k = 0;
   return <>{stars(text).map((seg, i) => {
     if (!seg.key) return <span key={i}>{seg.text}</span>;
-    const s0 = start + 46 * k++;
-    return <span key={i} style={sweep(interpolate(frame, [s0, s0 + 44], [0, 1], clamp), base)}>{seg.text}</span>;
+    // every key word turns red within about a second of the text finishing, however many there are (each sweep
+    // 16 frames, the next one 8 frames later), so the last one is always done before the cut
+    // on the narrator's word when the build knows it (data.keyAt), never before the text is in
+    const s0 = Math.max(start + 8 * k, keyAt[k] ?? -Infinity); k++;
+    return <span key={i} style={sweep(interpolate(frame, [s0, s0 + 16], [0, 1], clamp), base)}>{seg.text}</span>;
   })}</>;
 };
 
@@ -67,7 +70,7 @@ type Bg = {background: string; backgroundVideo?: string} & TemplateTiming;
 
 // ------------------------------------------------------------------ T22b: plain statement, letters pop in, key words swept red
 
-export const StatementPaper: React.FC<Bg & {statement: string}> = ({background, backgroundVideo, statement, backgroundPosition = '50% 50%', revealShift = 0}) => {
+export const StatementPaper: React.FC<Bg & {statement: string; keyAt?: (number | null)[]}> = ({background, backgroundVideo, statement, backgroundPosition = '50% 50%', revealShift = 0, keyAt}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const shade = easeOut(f, 0, 16);
@@ -78,7 +81,7 @@ export const StatementPaper: React.FC<Bg & {statement: string}> = ({background, 
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 170px'}}>
       <div style={{maxWidth: 1580, textAlign: 'center', ...textBase, fontWeight: 700, fontSize: 88, lineHeight: 1.12, letterSpacing: -1.2, color: CREAM,
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.55))'}}>
-        {f < done ? <PopLetters text={statement} frame={f} start={18} keyColor={CREAM} /> : <SweepKeys text={statement} frame={f} start={done} base="#fff9ed" />}
+        {f < done ? <PopLetters text={statement} frame={f} start={18} keyColor={CREAM} /> : <SweepKeys text={statement} frame={f} start={done} base="#fff9ed" keyAt={keyAt} />}
       </div>
     </AbsoluteFill>
   </AbsoluteFill>;

@@ -187,7 +187,7 @@ export const RevealText: React.FC<{text: string; frame: number; start: number; s
     return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre'}}>{[...w].map((c, k) => {
       const idx = first + k;
       const m = marks.find((x) => idx >= x.from && idx < x.to);
-      const lit = m ? Math.max(0, Math.min(1, (frame - m.at - (idx - m.from) * 0.8) / 4)) : 0;
+      const lit = m ? Math.max(0, Math.min(1, (frame - m.at - (idx - m.from) * 1.4) / 8)) : 0; // a calm left-to-right fill
       return <span key={k} style={{...revealChar(frame, start + idx * st),
         color: m && lit > 0 ? (lit >= 1 ? m.color : `color-mix(in srgb, ${m.color} ${Math.round(lit * 100)}%, currentColor)`) : undefined}}>{c}</span>;
     })}</span>;

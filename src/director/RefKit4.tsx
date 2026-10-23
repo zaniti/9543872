@@ -2,7 +2,8 @@ import React from 'react';
 import {AbsoluteFill, Audio, Easing, Img, Sequence, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {Background} from './VariantTemplates';
 import {CREAM, INK, RED, RevealText, TagBox, TagLetters, clamp, easeInOut, easeOut, tagDone, textBase} from './channelStyle';
-import {TAG, TAG_BIG, TornPrint} from './RefKit';
+import {DrawnArrow, TAG, TAG_BIG, TornPrint} from './RefKit';
+import {Paper as PaperBg} from './RefKit2';
 
 /**
  * The older templates rebuilt on the house pieces (the owner, 2026-10-23: "animation, text, color, dots, rgb and size
@@ -221,3 +222,99 @@ export const PhotoBurstRef: React.FC<{photos: string[]; positions?: string[]; du
 };
 
 export {INK};
+
+// ------------------------------------------------------------------ T1d: place + year, the year huge
+
+/** The year huge (the big-year style of T40: cream, a little depth, the digits arriving one by one), the place in a
+ *  75 px tag under it. */
+export const PlaceBigYearRef: React.FC<Bg & {place: string; year: string}> = ({background, backgroundVideo, backgroundPosition, place, year, revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const size = Math.round(Math.min(330, 1500 / Math.max(1, year.length * 0.64)));
+  const shown = Math.max(0, Math.min(year.length, Math.floor((f - 4) / 4) + 1));
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <AbsoluteFill style={{background: '#000', opacity: 0.25}} />
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 34}}>
+      <div style={{position: 'relative', ...textBase, fontWeight: 800, fontSize: size, letterSpacing: 4, lineHeight: 1, whiteSpace: 'pre', color: CREAM,
+        textShadow: [2, 4, 6, 8].map((d, i) => `0 ${Math.round((d * size) / 300)}px 0 ${['#c9c3b6', '#b3ad9f', '#9d9789', '#878173'][i]}`).join(', ') + ', 0 18px 36px rgba(0,0,0,.6)'}}>
+        <span style={{visibility: 'hidden'}}>{year}</span>
+        <span style={{position: 'absolute', left: 0, top: 0}}>{[...year].map((c, i) => <span key={i} style={{display: 'inline-block', opacity: i < shown ? 1 : 0,
+          transform: `translateY(${i < shown ? 0 : 30}px)`}}>{c}</span>)}</span>
+      </div>
+      <TagBox text={place} frame={f} start={4 + year.length * 4 + 4} size={TAG_BIG} />
+    </AbsoluteFill>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T1g: the year counted back from today
+
+/** The year counts back from today to the event in the big-year style (one colour all the way), then the place tag
+ *  and "N years ago" arrive under it. */
+export const YearsAgoRef: React.FC<Bg & {place: string; year: string; now?: number; agoLabel?: string}> = ({background, backgroundVideo, backgroundPosition, place, year,
+  now = new Date().getFullYear(), agoLabel = 'years ago', revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const target = Number(year) || now;
+  const shown = Math.round(interpolate(f, [2, 46], [now, target], {...clamp, easing: Easing.out(Easing.cubic)}));
+  const size = 300;
+  const tagAt = 50;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
+    <AbsoluteFill style={{background: '#000', opacity: 0.28}} />
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 30}}>
+      <div style={{...textBase, fontWeight: 800, fontSize: size, letterSpacing: 4, lineHeight: 1, color: CREAM, fontVariantNumeric: 'tabular-nums', opacity: f >= 2 ? 1 : 0,
+        textShadow: [2, 4, 6, 8].map((d, i) => `0 ${Math.round((d * size) / 300)}px 0 ${['#c9c3b6', '#b3ad9f', '#9d9789', '#878173'][i]}`).join(', ') + ', 0 18px 36px rgba(0,0,0,.6)'}}>{shown}</div>
+      <div style={{display: 'flex', alignItems: 'center', gap: 26}}>
+        <TagBox text={place} frame={f} start={tagAt} size={TAG_BIG} />
+        {now > target ? <div style={{...textBase, fontWeight: 600, fontSize: 52, lineHeight: 1.3, color: CREAM, whiteSpace: 'pre', textShadow: '0 3px 12px rgba(0,0,0,.6)'}}>
+          <RevealText text={`${now - target} ${agoLabel}`} frame={f} start={tagDone(place, tagAt) + 2} /></div> : null}
+      </div>
+    </AbsoluteFill>
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T8: two people
+
+/** Two torn polaroids on the channel's paper (the house name card), their names typed in the margins, a thick drawn
+ *  arrow between them. */
+export const TwoPeopleRef: React.FC<{first: string; second: string; firstAspect?: number; secondAspect?: number; firstPosition?: string; secondPosition?: string;
+  nameA: string; nameB: string; revealShift?: number}> = ({first, second, firstAspect = 0.78, secondAspect = 0.78, firstPosition, secondPosition, nameA, nameB, revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const H = 560;
+  const card = (src: string, aspect: number, pos: string | undefined, name: string, cx: number, at: number, seed: number, tilt: number) => {
+    const w = Math.round(Math.max(400, Math.min(500, H * aspect)));
+    const W = w + 2 * Math.round(w * 0.04), Hc = H + Math.round(w * 0.04) + Math.round(40 * 2.6);
+    const p = interpolate(f, [at, at + 12], [0, 1], {...clamp, easing: Easing.out(Easing.cubic)});
+    if (f < at) return null;
+    return <div style={{position: 'absolute', left: cx - W / 2, top: 540 - Hc / 2, opacity: Math.min(1, p * 1.4), transform: `translateY(${(1 - p) * 140}px) rotate(${tilt * p}deg)`,
+      filter: p < 1 ? `blur(${(1 - p) * 6}px)` : undefined}}>
+      <TornPrint src={src} w={w} h={H} position={pos} name={name} nameAt={at + 10} nameSize={40} f={f} seed={seed} />
+    </div>;
+  };
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+    <PaperBg frame={clock} />
+    {card(first, firstAspect, firstPosition, nameA, 560, 0, 21, -1.5)}
+    {card(second, secondAspect, secondPosition, nameB, 1360, 22, 22, 1.5)}
+    <DrawnArrow x1={835} y1={470} x2={1085} y2={470} f={f} start={14} dur={12} bend={-0.25} color="#1b1a17" width={9} head={34} />
+  </AbsoluteFill>;
+};
+
+// ------------------------------------------------------------------ T20: labels on one or two photos
+
+/** One or two short labels (sides, groups, names of wars) in the house tag, low on the photo; with a second photo the
+ *  picture cuts and the second label types on it. */
+export const LabelsOnPhotoRef: React.FC<{first: string; second?: string; firstPosition?: string; secondPosition?: string; labelA: string; labelB?: string; durationFrames: number;
+  revealShift?: number}> = ({first, second, firstPosition = '50% 50%', secondPosition = '50% 50%', labelA, labelB = '', durationFrames, revealShift = 0}) => {
+  const clock = useCurrentFrame();
+  const f = clock - revealShift;
+  const cut = second ? Math.round(durationFrames * 0.42) : Infinity;
+  const onSecond = clock >= cut;
+  const startB = second ? cut + 12 : 46;
+  return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
+    <Background src={onSecond ? second! : first} position={onSecond ? secondPosition : firstPosition} frame={onSecond ? clock - cut : clock} />
+    <div style={{position: 'absolute', left: 0, width: 960, bottom: 102, display: 'flex', justifyContent: 'center'}}><TagBox text={labelA} frame={f} start={13} size={TAG_BIG} /></div>
+    {labelB ? <div style={{position: 'absolute', left: 960, width: 960, bottom: 102, display: 'flex', justifyContent: 'center'}}><TagBox text={labelB} frame={clock} start={startB} size={TAG_BIG} /></div> : null}
+  </AbsoluteFill>;
+};

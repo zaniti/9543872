@@ -9,7 +9,7 @@ import {Badge, DrawnArrow, Reveal, TAG, TAG_BIG, TornPrint, TypeTag} from './Ref
  * template: Poppins, the channel colour, one cream; text types in one character per frame; arrows draw themselves.
  */
 
-const Paper: React.FC<{frame: number}> = ({frame}) => <AbsoluteFill style={{transform: `scale(${1.02 + Math.max(0, frame) * 0.00012})`}}>
+export const Paper: React.FC<{frame: number}> = ({frame}) => <AbsoluteFill style={{transform: `scale(${1.02 + Math.max(0, frame) * 0.00012})`}}>
   <Img src={staticFile(PAPER)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: paperFilter('brightness(1.09) saturate(.58)')}} />
   <div style={{position: 'absolute', inset: 0, background: paperVeil('rgba(247,243,223,.42)')}} />
 </AbsoluteFill>;
@@ -278,7 +278,7 @@ export const PercentRef: React.FC<{background: string; position?: string; percen
 
 /** One sentence over a darkened photo or film, in cream, centred, on one or two lines; the key words (in *stars*) in
  *  the channel colour. The words rise in softly. */
-export const SentenceRef: React.FC<{background: string; position?: string; sentence: string; revealShift?: number}> = ({background, position, sentence, revealShift = 0}) => {
+export const SentenceRef: React.FC<{background: string; position?: string; sentence: string; revealShift?: number; keyAt?: (number | null)[]}> = ({background, position, sentence, revealShift = 0, keyAt = []}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   // the references: the sentence arrives in cream (about half a second), then the key words turn red, letter by letter
@@ -288,7 +288,8 @@ export const SentenceRef: React.FC<{background: string; position?: string; sente
   let pos = 0, nth = 0;
   sentence.split(/(\*[^*]+\*)/).filter(Boolean).forEach((seg) => {
     const len = seg.replace(/\*/g, '').length;
-    if (seg.startsWith('*')) marks.push({from: pos, to: pos + len, at: done + 10 + 12 * nth++, color: RED});
+    // each key phrase turns red on the narrator's word when the build knows it (data.keyAt), never before the line is in
+    if (seg.startsWith('*')) { marks.push({from: pos, to: pos + len, at: Math.max(done + 4 + 12 * nth, keyAt[nth] ?? -Infinity), color: RED}); nth++; }
     pos += len;
   });
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
