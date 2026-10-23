@@ -168,14 +168,15 @@ export const FlowMap: React.FC<{map: string; position?: string; hub: {x: number;
       // candidates all around the dot, near first; a candidate is refused if it covers the dot or leaves the screen,
       // then the one that the fewest arrow points pass under wins
       const spots: number[][] = [];
-      for (const r of [34, 80, 140]) for (let k = 0; k < 12; k++) {
+      for (const r of [22, 50, 90]) for (let k = 0; k < 12; k++) {
         const a = (k / 12) * Math.PI * 2, cx = hx0 + Math.cos(a) * (r + tw / 2), cy = hy0 + Math.sin(a) * (r + th / 2);
         spots.push([cx - tw / 2, cy - th / 2, r]);
       }
       const score = ([x, y, r]: number[]) => {
         if (x < 30 || y < 30 || x + tw > 1890 || y + th > 1050) return 1e9;
         if (hx0 > x - 20 && hx0 < x + tw + 20 && hy0 > y - 20 && hy0 < y + th + 20) return 1e9;
-        return pts.filter(([px, py]) => px > x - 14 && px < x + tw + 14 && py > y - 14 && py < y + th + 14).length * 100 + r;
+        // close to its dot first (the tags sit over the arrows, so an arrow passing under is a small cost)
+        return pts.filter(([px, py]) => px > x - 14 && px < x + tw + 14 && py > y - 14 && py < y + th + 14).length * 6 + r;
       };
       const [lx, ly] = spots.reduce((best, s) => (score(s) < score(best) ? s : best), spots[0]);
       // the spot is decided on the unzoomed map (stable for the whole shot), then rides the zoom with the dot

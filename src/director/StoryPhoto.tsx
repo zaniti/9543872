@@ -51,8 +51,8 @@ export const photoView = (aspect: number, cam: {cx: number; cy: number; w: numbe
 /** A red tag with a hand-drawn arrow to a point on screen (px, py); `t` = frames since it appeared. */
 /** `settledX`: where the point is on screen once the camera has stopped; the tag picks its side from it once, so it never
  *  jumps from one side to the other while the camera is still moving. */
-export const PointerTag: React.FC<{px: number; py: number; text: string; t: number; opacity?: number; settledX?: number; side?: 'left' | 'right';
-  face?: {rx: number; ry: number}}> = ({px, py, text, t, opacity = 1, settledX, side, face}) => {
+export const PointerTag: React.FC<{px: number; py: number; text: string; t: number; opacity?: number; settledX?: number; settledY?: number; side?: 'left' | 'right';
+  face?: {rx: number; ry: number}}> = ({px, py, text, t, opacity = 1, settledX, settledY, side, face}) => {
   // a tag only points at what is on screen (the build rejects a tag whose point is outside its shot)
   if (t < 0 || opacity <= 0 || px < 80 || px > FRAME_W - 80 || py < 80 || py > FRAME_H - 80) return null;
   const show = interpolate(t, [0, 8], [0, 1], {...clamp, easing: Easing.out(Easing.back(1.6))});
@@ -65,8 +65,10 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
   const tx = Math.max(40, Math.min(FRAME_W - tagW - 40, face ? (right ? px - face.rx - 110 - tagW : px + face.rx + 110) : (right ? px - tagW - 170 : px + 170)));
   // above the point; when there is no room above (a point near the top of the frame), below it instead, never
   // squeezed against the edge
-  const above = face ? py - face.ry - 150 : py - 210;
-  const ty = above >= 40 ? above : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
+  // decided once, where the camera settles (the slow drift must never flip the tag from below to above mid-shot)
+  const ref = settledY ?? py;
+  const roomAbove = (face ? ref - face.ry - 150 : ref - 210) >= 40;
+  const ty = roomAbove ? Math.max(40, face ? py - face.ry - 150 : py - 210) : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
   const ax = right ? tx + tagW : tx, ay = ty + tagH / 2; // where the arrow leaves the tag
   const draw = interpolate(t, [4, 18], [0, 1], clamp);
   let gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point
@@ -122,8 +124,8 @@ export const StoryPhoto: React.FC<{src: string; aspect: number; shots: StoryShot
       const at = moving ? moving.at + move : t.at;
       if (f < at) return null;
       const [px, py] = v.toScreen(t.x, t.y);
-      const [settledX] = photoView(aspect, camera(shots, at + 6, move)).toScreen(t.x, t.y);
-      return <PointerTag key={i} px={px} py={py} settledX={settledX} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined} text={t.text} t={f - at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
+      const [settledX, settledY] = photoView(aspect, camera(shots, at + 6, move)).toScreen(t.x, t.y);
+      return <PointerTag key={i} px={px} py={py} settledX={settledX} settledY={settledY} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined} text={t.text} t={f - at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
     })}
   </AbsoluteFill>;
 };
