@@ -138,9 +138,10 @@ export const BigYearRef: React.FC<{backgrounds: string[]; text: string; at?: num
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const n = Math.max(1, backgrounds.length);
-  // the photos behind change fast, about every 10 frames, cycling through them (the owner, 2026-10-23)
+  // the photos behind change fast, about every 10 frames (the owner, 2026-10-23), each shown once: never a loop, the
+  // last one holds while the figure finishes
   const per = Math.max(7, Math.min(11, Math.floor(durationFrames / n)));
-  const k = Math.floor(Math.max(0, clock) / per) % n;
+  const k = Math.min(n - 1, Math.floor(Math.max(0, clock) / per));
   const shown = Math.max(0, Math.min(text.length, Math.floor((f - at) / 5) + 1));
   // as large as the frame allows (the references fill about half the height): a long figure goes on two lines, the
   // number huge and its unit under it ("$80" / "MILLION")
