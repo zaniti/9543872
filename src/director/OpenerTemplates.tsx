@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {CRIMSON, RED, TEXT_RED, clamp, textBase} from './channelStyle';
+import {CREAM, CRIMSON, RED, TEXT_RED, clamp, revealChar, textBase} from './channelStyle';
 import {Background} from './VariantTemplates';
 import type {TemplateTiming} from './templateMotion';
 
@@ -19,7 +19,7 @@ import type {TemplateTiming} from './templateMotion';
  *   T1j  stamp         a rubber stamp in the channel colour lands on the frame: the place and the date, rough ink
  */
 type Bg = {background: string; backgroundVideo?: string; backgroundPosition?: string} & TemplateTiming;
-const WHITE = '#fffdf7';
+const WHITE = CREAM; // one cream for all text (channelStyle)
 const PAPER = '#f3ecdb';
 
 /** Letters popping up one after another behind a mask (T1's rhythm: about one letter per frame). */
@@ -27,7 +27,7 @@ const Pop: React.FC<{text: string; frame: number; start: number; every?: number;
   <span style={{display: 'inline-flex', overflow: 'hidden', whiteSpace: 'pre', ...style}}>
     {[...text].map((ch, i) => {
       const s = start + i * every;
-      return <span key={i} style={{display: 'inline-block', transform: `translateY(${interpolate(frame, [s, s + 4], [110, 0], clamp)}%)`}}>
+      return <span key={i} style={revealChar(frame, s)}>
         {ch === ' ' ? ' ' : ch}</span>;
     })}
   </span>
@@ -239,7 +239,7 @@ export const Dateline: React.FC<Bg & {place: string; year?: string; date?: strin
       <div style={{position: 'absolute', left: 0, top: 0, bottom: 0, width: 16, background: RED}} />
       <div style={{position: 'absolute', left: 140, top: 0, bottom: 0, display: 'flex', alignItems: 'center', ...textBase, color: WHITE,
         fontWeight: 700, fontSize: 46, letterSpacing: 5, whiteSpace: 'pre'}}>
-        {line.slice(0, typed)}<span style={{display: 'inline-block', width: 24, height: 46, marginLeft: 6, background: caret && f >= 8 ? TEXT_RED : 'transparent'}} />
+        {[...line].map((ch, i) => <span key={i} style={revealChar(f, 8 + i / 1.5)}>{ch === ' ' ? ' ' : ch}</span>)}<span style={{display: 'inline-block', width: 24, height: 46, marginLeft: 6, background: caret && f >= 8 ? TEXT_RED : 'transparent'}} />
       </div>
     </div>
   </AbsoluteFill>;

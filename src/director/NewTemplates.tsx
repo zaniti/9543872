@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame} from 'remotion';
-import {CRIMSON, INK, PaperGround, RED, TEXT_ON_PAPER, RiseWords, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase} from './channelStyle';
+import {CRIMSON, INK, PaperGround, RED, RevealText, TEXT_ON_PAPER, RiseWords, TagBox, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase} from './channelStyle';
 
 /** A real photo as a print on the paper: white border, slight tilt, drops in from below and settles. */
 const Print: React.FC<{src: string; x: number; y: number; w: number; h: number; frame: number; start: number; tilt?: number; position?: string; border?: number}> = ({src, x, y, w, h, frame, start, tilt = 0, position = '50% 35%', border = 14}) => {
@@ -9,7 +9,7 @@ const Print: React.FC<{src: string; x: number; y: number; w: number; h: number; 
   return <div style={{position: 'absolute', left: x, top: y, width: w, height: h, padding: border, boxSizing: 'border-box', background: '#fbf8ee',
     boxShadow: `0 ${8 + 10 * p}px ${18 + 12 * p}px rgba(24,20,12,.28)`, opacity: Math.min(1, p * 1.4),
     transform: `translateY(${(1 - p) * 90}px) rotate(${tilt * (0.4 + 0.6 * p)}deg) scale(${0.9 + 0.1 * p})`, transformOrigin: '50% 100%'}}>
-    <Img src={staticFile(src)} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: position, filter: `sepia(.12) contrast(.98) blur(${(1 - p) * 6}px)`}} />
+    <Img src={staticFile(src)} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: position, filter: `blur(${(1 - p) * 6}px)`}} />
   </div>;
 };
 
@@ -22,14 +22,15 @@ export type TimelineStripProps = {heading: string; events: TimelineEvent[]; reve
 export const TimelineStrip: React.FC<TimelineStripProps> = ({heading, events, revealShift = 0}) => {
   const frame = useCurrentFrame() - revealShift;
   const n = events.length;
-  const left = 190, right = 1730, lineY = 690;
+  const left = 330, right = 1590, lineY = 690; // the outer captions (400 wide) stay 130 px inside the frame
   const line = easeInOut(frame, 8, 38);
   const xOf = (i: number) => left + (n === 1 ? (right - left) / 2 : ((right - left) * i) / (n - 1));
   const headIn = easeOut(frame, 0, 14);
   return <AbsoluteFill style={{overflow: 'hidden', background: '#e7e7d9'}}>
     <PaperGround frame={frame} />
-    <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', color: TEXT_ON_PAPER, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
-      opacity: headIn, transform: `translateY(${(1 - headIn) * 16}px)`}}>{heading}</div>
+    {/* the house heading on paper (as T41): 80 px SemiBold ink */}
+    <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', color: INK, ...textBase, fontWeight: 600, fontSize: 80, lineHeight: 1.2,
+      }}><RevealText text={heading} frame={frame} start={0} />{void headIn}</div>
     <svg width="1920" height="1080" style={{position: 'absolute', inset: 0}}>
       <line x1={left - 60} y1={lineY} x2={left - 60 + (right - left + 120) * line} y2={lineY} stroke={INK} strokeWidth={6} strokeLinecap="round" />
     </svg>
@@ -44,10 +45,10 @@ export const TimelineStrip: React.FC<TimelineStripProps> = ({heading, events, re
         <div style={{position: 'absolute', left: x - 17, top: lineY - 17, width: 34, height: 34, borderRadius: 17, background: last ? RED : INK,
           transform: `scale(${dot * pulse})`, boxShadow: '0 3px 8px rgba(0,0,0,.25)'}} />
         <div style={{position: 'absolute', left: x - 200, width: 400, top: lineY + 46, display: 'flex', justifyContent: 'center'}}>
-          <WipeBar text={e.year} frame={frame} start={at + 4} color={last ? RED : CRIMSON} fontSize={50} height={78} padding={22} letterSpacing={-0.5} spread={6} radius={4} />
+          <TagBox text={e.year} frame={frame} start={at + 4} size={56} anchor="left" />{void CRIMSON}{void WipeBar}
         </div>
-        <div style={{position: 'absolute', left: x - 200, width: 400, top: lineY + 140, textAlign: 'center', color: INK, ...textBase, fontSize: 34, lineHeight: 1.15}}>
-          <RiseWords text={e.caption} frame={frame} start={at + 12} gap={2} />
+        <div style={{position: 'absolute', left: x - 200, width: 400, top: lineY + 150, textAlign: 'center', color: INK, ...textBase, fontWeight: 500, fontSize: 36, lineHeight: 1.25}}>
+          <RevealText text={e.caption} frame={frame} start={at + 12} />{void RiseWords}
         </div>
       </React.Fragment>;
     })}
@@ -71,7 +72,7 @@ export const CompareBars: React.FC<CompareBarsProps> = ({heading, rows, prefix =
   return <AbsoluteFill style={{overflow: 'hidden', background: '#e7e7d9'}}>
     <PaperGround frame={frame} />
     <div style={{position: 'absolute', top: 80, left: 0, right: 0, textAlign: 'center', color: TEXT_ON_PAPER, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
-      opacity: headIn, transform: `translateY(${(1 - headIn) * 16}px)`}}>{heading}</div>
+      }}><RevealText text={heading} frame={frame} start={0} />{void headIn}</div>
     {rows.map((r, i) => {
       const at = r.at ?? 18 + i * 34;
       const y = top0 + i * rowH;

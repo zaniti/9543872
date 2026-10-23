@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {Background} from './VariantTemplates';
-import {CREAM, PaperGround, TEXT_RED, clamp} from './channelStyle';
+import {CREAM, PaperGround, RevealText, TEXT_RED, TagLetters, clamp, FONT} from './channelStyle';
 
 /**
  * The owner's approved reference templates 4, 12, 13, 17 and 20, rebuilt for any picture: every card takes the
@@ -34,7 +34,7 @@ export const PaperPrints: React.FC<{photos: string[]; positions?: string[]; dura
         if (enter <= 0 || leave >= 1) return null;
         return <Img key={`${src}-${i}`} src={staticFile(src)} style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
           objectPosition: positions[i] ?? 'center', transform: `translateY(${(1 - enter) * 100 - leave * 100}%) scale(${1 + moving * 0.008})`,
-          filter: `sepia(.12) contrast(.97) blur(${moving * 7}px)`}} />;
+          filter: `blur(${moving * 7}px)`}} />;
       })}
     </div>
     <div style={{position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(90deg,rgba(46,42,31,.10),transparent 23%,transparent 74%,rgba(46,42,31,.10))', mixBlendMode: 'multiply'}} />
@@ -70,7 +70,7 @@ export const SourceCard: React.FC<{background: string; backgroundVideo?: string;
   const p = interpolate(f, [14, 34], [0, 1], {easing: Easing.bezier(0.22, 0.78, 0.27, 1), ...clamp});
   const {w, h} = fit(aspect, 512, 735); // the card's size in the reference (570 x 804 with its border)
   return <AbsoluteFill style={{overflow: 'hidden', background: '#12100c'}}>
-    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} filter="contrast(.96) saturate(.84)" />
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
     <div style={{position: 'absolute', inset: 0, background: 'rgba(27,19,7,.15)'}} />
     <div style={{position: 'absolute', left: 960 - w / 2 - 29, top: 540 - h / 2 - 22, width: w + 58, height: h + 72, padding: '29px 29px 43px', boxSizing: 'border-box',
       background: '#eee8d8', boxShadow: '0 18px 35px rgba(0,0,0,.55)', opacity: Math.min(1, p * 3), transform: `translateY(${(1 - p) * 250}px) scale(${0.82 + 0.18 * p})`,
@@ -89,8 +89,8 @@ export const MapPair: React.FC<{first: string; second: string; aspectA: number; 
     <PaperGround frame={0} />
     <PaperCard src={first} aspect={aspectA} cx={465} cy={425} maxW={800} maxH={520} p={slideIn(f, 9, 14)} from="left" />
     <PaperCard src={second} aspect={aspectB} cx={1455} cy={425} maxW={800} maxH={520} p={slideIn(f, 62, 14)} from="right" />
-    <div style={{position: 'absolute', left: 125, right: 125, top: 760, textAlign: 'center', font: '400 60px Arial, Helvetica, sans-serif', lineHeight: 1.14,
-      color: '#111', opacity: text, transform: `translateY(${(1 - text) * 10}px)`}}>{caption}</div>
+    <div style={{position: 'absolute', left: 125, right: 125, top: 760, textAlign: 'center', font: `400 60px ${FONT}`, lineHeight: 1.14,
+      color: '#111'}}><RevealText text={caption} frame={f} start={24} />{void text}</div>
   </AbsoluteFill>;
 };
 
@@ -98,12 +98,9 @@ export const MapPair: React.FC<{first: string; second: string; aspectA: number; 
 
 const Tag: React.FC<{text: string; frame: number; start: number}> = ({text, frame, start}) => {
   if (frame < start - 2) return null; // the bar appears at once (no fade), then the letters type in
-  return <div style={{height: 115, background: TEXT_RED, color: CREAM, font: '700 70px Arial, Helvetica, sans-serif', padding: '11px 28px', boxSizing: 'border-box',
+  return <div style={{height: 115, background: TEXT_RED, color: CREAM, font: `600 70px ${FONT}`, padding: '11px 28px', boxSizing: 'border-box',
     overflow: 'hidden', whiteSpace: 'pre', borderRadius: 4}}>
-    {[...text].map((ch, i) => {
-      const s = start + i * 1.4;
-      return <span key={i} style={{display: 'inline-block', opacity: frame >= s ? 1 : 0, transform: `translateY(${interpolate(frame, [s, s + 3], [100, 0], clamp)}%)`}}>{ch}</span>;
-    })}
+    <TagLetters text={text} frame={frame} start={start} rtl={false} />
   </div>;
 };
 

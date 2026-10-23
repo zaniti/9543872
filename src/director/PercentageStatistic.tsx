@@ -41,7 +41,7 @@ export const PercentageStatistic: React.FC<{background?: string; percent?: numbe
       <Img src={staticFile(background)} style={{position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', objectPosition: backgroundPosition, transform: `scale(${zoom * 1.08})`, transformOrigin: backgroundPosition, filter: 'blur(18px) brightness(.3) saturate(.5)'}} />
       <Img src={staticFile(background)} style={{position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', filter}} />
     </> : <Img src={staticFile(background)} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: backgroundPosition, transform: `scale(${zoom})`, transformOrigin: backgroundPosition, filter}} />}
-    {sourceNote ? <div style={{position: 'absolute', right: 74, top: 44, color: '#fff9ea', font: `700 22px ${FONT}`, opacity: interpolate(f, [12, 23], [0, .8], clamp)}}>{sourceNote}</div> : null}
+    {sourceNote ? <div style={{position: 'absolute', right: 74, top: 44, color: CREAM, font: `700 22px ${FONT}`, opacity: interpolate(f, [12, 23], [0, .8], clamp)}}>{sourceNote}</div> : null}
     <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
       <div style={{filter: 'drop-shadow(0 4px 14px rgba(0,0,0,.45))'}}><div style={{color: TEXT_RED, fontFamily: FONT, fontWeight: 700, fontSize: 124, letterSpacing: -3, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
         opacity: numberIn, transform: `translateY(${(1 - numberIn) * (calm ? 10 : 24)}px) scale(${settle})`,

@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {WipeBar} from './channelStyle';
+import {WipeBar, FONT, CREAM} from './channelStyle';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
 
 export type PortraitFeatureCardProps = {
@@ -38,7 +38,7 @@ export const PortraitFeatureCard: React.FC<PortraitFeatureCardProps> = ({
       <Img src={staticFile(background)} style={{position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', filter: 'sepia(.42) contrast(.9) brightness(.83)'}} />
     </> : <Img src={staticFile(background)} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: backgroundPosition, transform: `scale(${bgScale})`, transformOrigin: backgroundPosition, filter: 'sepia(.42) contrast(.9) brightness(.83)'}} />}
     <div style={{position: 'absolute', inset: 0, background: 'linear-gradient(90deg,rgba(24,19,11,.10),transparent 45%,rgba(24,19,11,.22))'}} />
-    {sourceNote ? <div style={{position: 'absolute', top: 45, right: 66, color: '#f6eee0', opacity: interpolate(frame, [12, 24], [0, .84], {extrapolateLeft:'clamp', extrapolateRight:'clamp'}), fontFamily: 'Arial, Helvetica, sans-serif', fontSize: 23, fontWeight: 700, letterSpacing: .4}}>{sourceNote}</div> : null}
+    {sourceNote ? <div style={{position: 'absolute', top: 45, right: 66, color: CREAM, opacity: interpolate(frame, [12, 24], [0, .84], {extrapolateLeft:'clamp', extrapolateRight:'clamp'}), fontFamily: FONT, fontSize: 23, fontWeight: 700, letterSpacing: .4}}>{sourceNote}</div> : null}
     <div style={{position: 'absolute', left: 660, top: 82, width: 600, height: 910, overflow: 'hidden', boxShadow: '0 18px 38px rgba(0,0,0,.46)', opacity: cardProgress, transform: `translateY(${(1-cardProgress)*480}px)`, transformOrigin: '50% 100%'}}>
       <Img src={staticFile(portrait)} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: portraitPosition, filter: `sepia(.26) contrast(.95) blur(${(1-cardProgress)*10}px)`}} />
     </div>

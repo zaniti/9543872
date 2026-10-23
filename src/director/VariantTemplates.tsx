@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, OffthreadVideo, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CREAM, INK, RED, TEXT_RED, clamp, easeInOut, easeOut, textBase} from './channelStyle';
+import {CREAM, INK, RED, RevealText, TEXT_RED, TagBox, TagLetters, clamp, easeInOut, easeOut, revealChar, textBase} from './channelStyle';
 
 /**
  * Second designs for the most used jobs (statement, number, sentence, place) and two new kinds (map, document).
@@ -48,8 +48,7 @@ const PopLetters: React.FC<{text: string; frame: number; start: number; perLette
     return <span key={`${si}-${wi}`} style={{display: 'inline-block', overflow: 'hidden', verticalAlign: 'bottom', whiteSpace: 'nowrap'}}>
       {[...word].map((ch, ci) => {
         const s = start + perLetter * n++;
-        const y = interpolate(frame, [s, s + 3], [110, 0], clamp);
-        return <span key={ci} style={{display: 'inline-block', transform: `translateY(${y}%)`, opacity: frame >= s ? 1 : 0, color: seg.key ? keyColor : 'inherit'}}>{ch}</span>;
+        return <span key={ci} style={{...revealChar(frame, s), color: seg.key ? keyColor : 'inherit'}}>{ch}</span>;
       })}
     </span>;
   }))}</>;
@@ -77,9 +76,9 @@ export const StatementPaper: React.FC<Bg & {statement: string}> = ({background, 
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} filter={`brightness(${1 - 0.45 * shade}) saturate(.8)`} />
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 170px'}}>
-      <div style={{maxWidth: 1580, textAlign: 'center', ...textBase, fontWeight: 700, fontSize: 88, lineHeight: 1.12, letterSpacing: -1.2, color: '#fff9ed',
+      <div style={{maxWidth: 1580, textAlign: 'center', ...textBase, fontWeight: 700, fontSize: 88, lineHeight: 1.12, letterSpacing: -1.2, color: CREAM,
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.55))'}}>
-        {f < done ? <PopLetters text={statement} frame={f} start={18} keyColor="#fff9ed" /> : <SweepKeys text={statement} frame={f} start={done} base="#fff9ed" />}
+        {f < done ? <PopLetters text={statement} frame={f} start={18} keyColor={CREAM} /> : <SweepKeys text={statement} frame={f} start={done} base="#fff9ed" />}
       </div>
     </AbsoluteFill>
   </AbsoluteFill>;
@@ -104,7 +103,7 @@ export const SentenceMarker: React.FC<Bg & {sentence: string}> = ({background, b
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} filter={`brightness(${1 - 0.5 * shade}) saturate(.75)`} />
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 200px'}}>
-      <div style={{maxWidth: 1460, textAlign: 'center', ...textBase, color: '#fffaf0', fontWeight: 700, fontSize: 76, lineHeight: 1.32, letterSpacing: -0.7,
+      <div style={{maxWidth: 1460, textAlign: 'center', ...textBase, color: CREAM, fontWeight: 700, fontSize: 76, lineHeight: 1.32, letterSpacing: -0.7,
         textShadow: '0 3px 14px rgba(0,0,0,.45)', opacity: textIn, transform: `translateY(${(1 - textIn) * 12}px)`}}>
         {stars(sentence).map((seg, i) => {
           if (!seg.key) return <span key={i}>{seg.text}</span>;
@@ -123,15 +122,14 @@ export const PlaceCaption: React.FC<Bg & {place: string; year?: string}> = ({bac
   const f = clock - revealShift;
   const strip = easeInOut(f, 8, 22);
   const text = easeOut(f, 16, 28);
-  const tag = easeOut(f, 24, 34);
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
-    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} filter="saturate(.88)" />
+    <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
     <div style={{position: 'absolute', left: 0, right: 0, bottom: 0, height: 360, background: 'linear-gradient(transparent, rgba(0,0,0,.45))'}} />
     <div style={{position: 'absolute', left: 120, bottom: 130, transform: 'rotate(-0.8deg)', transformOrigin: 'left bottom'}}>
       {year ? <div style={{display: 'inline-block', marginBottom: 12, marginLeft: 4, background: RED, color: CREAM, ...textBase, fontWeight: 700, fontSize: 36,
-        padding: '8px 16px', borderRadius: 3, opacity: tag, transform: `translateY(${(1 - tag) * 12}px)`}}>{year}</div> : null}
+        padding: '8px 16px', borderRadius: 3, overflow: 'hidden', whiteSpace: 'pre', opacity: f >= 26 ? 1 : 0}}><TagLetters text={year} frame={f} start={26} /></div> : null}
       <div style={{background: '#f6f0de', padding: '20px 34px 18px', boxShadow: '0 10px 26px rgba(0,0,0,.35)', clipPath: `inset(0 ${(1 - strip) * 100}% 0 0)`}}>
-        <span style={{...textBase, color: INK, fontWeight: 700, fontSize: 58, letterSpacing: 3, textTransform: 'uppercase', opacity: text}}>{place}</span>
+        <span style={{...textBase, color: INK, fontWeight: 700, fontSize: 58, letterSpacing: 3, textTransform: 'uppercase'}}><RevealText text={place} frame={f} start={16} />{void text}</span>
       </div>
     </div>
   </AbsoluteFill>;
@@ -157,7 +155,6 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
   const {w, h} = fit(aspect, 1380, 800);
   const card = easeOut(f, 2, 16);
   const draw = interpolate(f, [22, 46], [0, 1], {...clamp, easing: Easing.inOut(Easing.cubic)});
-  const label01 = easeOut(f, 42, 54);
   const [bx, by, bw, bh] = box;
   const x = bx + bw / 2, y = by + bh / 2;
   const cx = (x / 100) * w, cy = (y / 100) * h;
@@ -169,7 +166,7 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <div style={{position: 'relative', width: w, height: h, opacity: card, boxShadow: '0 22px 50px rgba(0,0,0,.5)',
         transform: `translateY(${(1 - card) * 34}px) rotate(.6deg) scale(${push})`, transformOrigin: `${x}% ${y}%`}}>
-        <Img src={staticFile(map)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(.88) sepia(.1)'}} />
+        <Img src={staticFile(map)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'none'}} />
         {/* tape on the two corners farther from the circle */}
         {(x < 35 && y < 35) || (x > 65 && y > 65)
           ? <><Tape style={{right: -40, top: -12}} rotate={28} /><Tape style={{left: -40, bottom: -12}} rotate={28} /></>
@@ -178,9 +175,8 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
           <path d={handCircle(cx, cy, rx, ry)} fill="none" stroke={markerColor ?? RED} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round"
             pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} style={{filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.25))'}} />
         </svg>
-        {label ? <div style={{position: 'absolute', top: cy - 30, ...(right ? {left: cx + rx + 26} : {right: w - cx + rx + 26}),
-          background: RED, color: CREAM, ...textBase, fontWeight: 700, fontSize: 38, padding: '8px 18px', borderRadius: 3, whiteSpace: 'nowrap',
-          opacity: label01, transform: `translateY(${(1 - label01) * 10}px)`, boxShadow: '0 6px 14px rgba(0,0,0,.25)'}}>{label}</div> : null}
+        {label ? <div style={{position: 'absolute', top: cy - 40, ...(right ? {left: cx + rx + 26} : {right: w - cx + rx + 26})}}>
+          <TagBox text={label} frame={f} start={44} size={52} anchor={right ? 'left' : 'right'} /></div> : null}
       </div>
     </AbsoluteFill>
   </AbsoluteFill>;
@@ -222,7 +218,7 @@ export const DocumentMark: React.FC<Bg & {doc: string; aspect: number; box: [num
         // frame once the page is bigger than it (so no background band or empty paper edge in the middle of the shot)
         transform: `translate(${tx * travel}px, ${ty * travel}px) rotate(-.5deg) scale(${zoom})`,
         transformOrigin: `${ox}% ${oy}%`}}>
-        <Img src={staticFile(doc)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.15) contrast(1.05)'}} />
+        <Img src={staticFile(doc)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'none'}} />
         <div style={{position: 'absolute', left: `${bx - padX}%`, top: `${by - bh * 0.15}%`, width: `${bw + 2 * padX}%`, height: `${bh * 1.3}%`, background: marker,
           mixBlendMode: 'multiply', opacity: 0.85, transform: `scaleX(${mark}) rotate(-.3deg)`, transformOrigin: 'left center', borderRadius: '2px 6px 3px 7px'}} />
         {/* the tape goes on the edge away from the marked line, never over it */}
@@ -241,10 +237,10 @@ export const ThenNow: React.FC<{before: string; after: string; yearBefore: strin
   const tagA = easeOut(f, 8, 18);
   const tagB = easeOut(f, 56, 66);
   const tag = (text: string, p: number, side: 'left' | 'right') => <div style={{position: 'absolute', top: 70, [side]: 80, background: RED, color: CREAM,
-    ...textBase, fontWeight: 700, fontSize: 44, padding: '10px 20px', borderRadius: 3, opacity: p, transform: `translateY(${(1 - p) * 12}px)`,
-    boxShadow: '0 6px 16px rgba(0,0,0,.3)'}}>{text}</div>;
+    ...textBase, fontWeight: 600, fontSize: 44, padding: '10px 20px', borderRadius: 3, overflow: 'hidden', whiteSpace: 'pre', opacity: p > 0 ? 1 : 0,
+    boxShadow: '0 6px 16px rgba(0,0,0,.3)'}}><TagLetters text={text} frame={f} start={side === 'left' ? 10 : 58} /></div>;
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
-    <Background src={before} position={beforePosition} frame={clock} filter="saturate(.75)" />
+    <Background src={before} position={beforePosition} frame={clock} />
     <div style={{position: 'absolute', inset: 0, clipPath: `inset(0 0 0 ${split}%)`}}>
       <Background src={after} position={afterPosition} frame={clock} />
     </div>
@@ -273,7 +269,7 @@ export const PhotoBurst: React.FC<{photos: string[]; positions?: string[]; durat
       if (f < start - 1 || (next !== undefined && f > next + 13)) return null;
       return <Img key={`${src}-${i}`} src={staticFile(src)} style={{position: 'absolute', left: 0, top: (1 - enter) * 1080 - leave * 1080, width: '100%', height: '100%',
         objectFit: 'cover', objectPosition: positions[i] ?? 'center', transform: `scale(${1 + Math.max(0, f - start) * 0.00025 + motion * 0.012})`,
-        filter: `grayscale(.55) contrast(1.03) blur(${motion * 4}px)`}} />;
+        filter: `blur(${motion * 4}px)`}} />;
     })}
     <div style={{position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#0001,transparent 30%,transparent 70%,#0001)'}} />
   </AbsoluteFill>;

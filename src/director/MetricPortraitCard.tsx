@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {paperFilter, paperFor, paperVeil} from './channelStyle';
+import {INK, TEXT_ON_PAPER, paperFilter, paperFor, paperVeil, FONT} from './channelStyle';
 
 export type MetricPortraitCardProps = {
   paper?: string;
@@ -41,11 +41,11 @@ const Sentence:React.FC<{frame:number; start:number; lead:string; emphasis:strin
       easing: Easing.inOut(Easing.quad), extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     }) : 0;
     const color = isEmphasis
-      ? `rgb(${Math.round(21 + (214 - 21) * highlight)},${Math.round(21 + (17 - 21) * highlight)},${Math.round(21 + (11 - 21) * highlight)})`
+      ? (highlight >= 1 ? TEXT_ON_PAPER : `color-mix(in srgb, ${TEXT_ON_PAPER} ${Math.round(highlight * 100)}%, ${INK})`)
       : '#151515';
     return <span key={`${character}-${index}`} style={{
       display: 'inline-block', whiteSpace: 'pre', opacity: written,
-      transform: `translateY(${(1 - written) * 13}px)`, color,
+      transform: written < 1 ? `translateX(${((1 - written) * 0.35).toFixed(3)}em)` : undefined, color,
     }}>{character === ' ' ? '\u00a0' : character}</span>;
   })}</>;
 };
@@ -66,10 +66,10 @@ export const MetricPortraitCard:React.FC<MetricPortraitCardProps> = ({
     <div style={{position:'absolute',left:150,top:180,width:480,height:725,overflow:'hidden',opacity:portraitIn,transform:`translateY(${(1-portraitIn)*70}px) scale(${.95+.05*portraitIn})`,boxShadow:'0 12px 22px rgba(0,0,0,.22)',background:'#f8f4e8'}}>
       <Img src={staticFile(portrait)} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:portraitPosition}} />
     </div>
-    <div style={{position:'absolute',left:730,top:280,width:1080,fontFamily:'Arial, Helvetica, sans-serif',fontWeight:400,fontSize:76,lineHeight:1.12,letterSpacing:-1.6}}>
+    <div style={{position:'absolute',left:730,top:280,width:1080,fontFamily:FONT,fontWeight:500,fontSize:68,lineHeight:1.15,letterSpacing:-0.5,color:INK}}>
       <Sentence frame={frame} start={37} lead={firstLead} emphasis={firstEmphasis} tail={firstTail}/>
     </div>
-    <div style={{position:'absolute',left:730,top:635,width:1080,fontFamily:'Arial, Helvetica, sans-serif',fontWeight:400,fontSize:76,lineHeight:1.12,letterSpacing:-1.6}}>
+    <div style={{position:'absolute',left:730,top:635,width:1080,fontFamily:FONT,fontWeight:500,fontSize:68,lineHeight:1.15,letterSpacing:-0.5,color:INK}}>
       <Sentence frame={frame} start={104} lead={secondLead} emphasis={secondEmphasis} tail={secondTail} lineBreakAt={'Supported the establishment'.length}/>
     </div>
   </AbsoluteFill>;

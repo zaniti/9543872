@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {CREAM, RED, clamp, textBase} from './channelStyle';
+import {CREAM, TagBox, clamp} from './channelStyle';
 
 /**
  * T28 "story photo" (the owner's reference: a hook that tells one strong picture in several shots, 2026-10-21).
@@ -13,7 +13,9 @@ import {CREAM, RED, clamp, textBase} from './channelStyle';
  * The camera, the tag and the photo view are shared with the other motion pieces (MotionPieces.tsx).
  */
 export type StoryShot = {at: number; cx: number; cy: number; w: number};
-export type StoryTag = {at: number; until?: number; text: string; x: number; y: number};
+export type StoryTag = {at: number; until?: number; text: string; x: number; y: number; side?: 'left' | 'right';
+  /** a face box [x, y, w, h] in % of the photo: the arrow stops just outside it (never inside a face, never far) */
+  face?: [number, number, number, number]};
 
 const MOVE = 26; // frames for the camera to travel to the next shot
 export const FRAME_W = 1920, FRAME_H = 1080;
@@ -49,19 +51,28 @@ export const photoView = (aspect: number, cam: {cx: number; cy: number; w: numbe
 /** A red tag with a hand-drawn arrow to a point on screen (px, py); `t` = frames since it appeared. */
 /** `settledX`: where the point is on screen once the camera has stopped; the tag picks its side from it once, so it never
  *  jumps from one side to the other while the camera is still moving. */
-export const PointerTag: React.FC<{px: number; py: number; text: string; t: number; opacity?: number; settledX?: number}> = ({px, py, text, t, opacity = 1, settledX}) => {
+export const PointerTag: React.FC<{px: number; py: number; text: string; t: number; opacity?: number; settledX?: number; side?: 'left' | 'right';
+  face?: {rx: number; ry: number}}> = ({px, py, text, t, opacity = 1, settledX, side, face}) => {
   // a tag only points at what is on screen (the build rejects a tag whose point is outside its shot)
   if (t < 0 || opacity <= 0 || px < 80 || px > FRAME_W - 80 || py < 80 || py > FRAME_H - 80) return null;
   const show = interpolate(t, [0, 8], [0, 1], {...clamp, easing: Easing.out(Easing.back(1.6))});
   const o = Math.min(show, opacity);
   // the tag sits above the point, on the side facing the middle of the screen, never off screen
-  const right = (settledX ?? px) > FRAME_W / 2;
+  // the tag sits left of the point (right = true) or right of it; the build sets `side` for tags aimed at a face
+  const right = side ? side === 'left' : (settledX ?? px) > FRAME_W / 2;
   const tagW = 26 * text.length + 60;
-  const tx = Math.max(40, Math.min(FRAME_W - tagW - 40, right ? px - tagW - 170 : px + 170));
-  const ty = Math.max(40, Math.min(FRAME_H - 120, py - 210));
+  // aimed at a face: the tag sits up and to the side of the head, clear of it, so the arrow has room to curve onto it
+  const tx = Math.max(40, Math.min(FRAME_W - tagW - 40, face ? (right ? px - face.rx - 110 - tagW : px + face.rx + 110) : (right ? px - tagW - 170 : px + 170)));
+  const ty = Math.max(40, Math.min(FRAME_H - 120, face ? py - face.ry - 150 : py - 210));
   const ax = right ? tx + tagW : tx, ay = ty + 38; // where the arrow leaves the tag
   const draw = interpolate(t, [4, 18], [0, 1], clamp);
-  const gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point
+  let gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point
+  if (face) {
+    // (px, py) is the face centre: stop on the face's outline, a small gap outside it, on the line toward the tag
+    const th = Math.atan2(ay - py, ax - px);
+    const r = (face.rx * face.ry) / Math.sqrt((face.ry * Math.cos(th)) ** 2 + (face.rx * Math.sin(th)) ** 2) + 6;
+    gx = px + r * Math.cos(th); gy = py + r * Math.sin(th);
+  }
   const mx = (ax + gx) / 2, my = Math.min(ay, gy) - 60; // a gentle curve
   const ang = Math.atan2(gy - my, gx - mx);
   return <>
@@ -71,15 +82,20 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
       {draw >= 1 ? <path d={`M ${gx} ${gy} l ${-22 * Math.cos(ang - 0.45)} ${-22 * Math.sin(ang - 0.45)} M ${gx} ${gy} l ${-22 * Math.cos(ang + 0.45)} ${-22 * Math.sin(ang + 0.45)}`}
         stroke={CREAM} strokeWidth={5} strokeLinecap="round" fill="none" /> : null}
     </svg>
-    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={right ? 'right center' : 'left center'} />
+    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={right ? 'right center' : 'left center'} t={t} />
   </>;
 };
 
-export const RedTag: React.FC<{text: string; left: number; top: number; show: number; opacity?: number; origin?: string; size?: number}> = ({text, left, top, show, opacity = 1, origin = 'left center', size = 44}) =>
-  <div style={{position: 'absolute', left: 0, top: 0, background: RED, color: CREAM, ...textBase, fontWeight: 800, fontSize: size,
-    padding: '10px 26px', borderRadius: 6, whiteSpace: 'nowrap', opacity: Math.min(opacity, show),
-    transform: `translate(${left}px, ${top}px) scale(${0.7 + 0.3 * show})`, // a transform, not left/top: moves smoothly
-    transformOrigin: origin, boxShadow: '0 8px 20px rgba(0,0,0,.45)'}}>{text}</div>;
+/** A tag in the reference style (RefKit): channel-colour box at its full width, cream Poppins text that types in one
+ *  character per frame (`t` = frames since the tag appeared; without it the whole text shows). */
+export const RedTag: React.FC<{text: string; left: number; top: number; show: number; opacity?: number; origin?: string; size?: number; t?: number}> = ({text, left, top, show, opacity = 1, origin = 'left center', size = 56, t}) => {
+  // the references' tag (measured: 56 px Poppins SemiBold in an 87 px box) in the shared tag animation; the box grows
+  // from the side that faces its arrow
+  if (show <= 0) return null;
+  return <div style={{position: 'absolute', left: 0, top: 0, transform: `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0)`, opacity}}>
+    <TagBox text={text} frame={t ?? 999} start={0} size={size} rtl={false} anchor={origin.startsWith('right') ? 'right' : 'left'} />
+  </div>;
+};
 
 export const tagOpacity = (f: number, until: number) => interpolate(f, [until - 6, until], [1, 0], clamp);
 
@@ -99,7 +115,7 @@ export const StoryPhoto: React.FC<{src: string; aspect: number; shots: StoryShot
     {tags.map((t, i) => {
       const [px, py] = v.toScreen(t.x, t.y);
       const [settledX] = photoView(aspect, camera(shots, t.at + move + 6, move)).toScreen(t.x, t.y);
-      return <PointerTag key={i} px={px} py={py} settledX={settledX} text={t.text} t={f - t.at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
+      return <PointerTag key={i} px={px} py={py} settledX={settledX} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined} text={t.text} t={f - t.at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
     })}
   </AbsoluteFill>;
 };

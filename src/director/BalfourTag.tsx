@@ -1,23 +1,17 @@
 import React from 'react';
-import {AbsoluteFill, Img, OffthreadVideo, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CRIMSON} from './channelStyle';
+import {CREAM, CRIMSON, FONT, TagLetters} from './channelStyle';
 
 const lowerCopy = 'Balfour Declaration';
 const yearCopy = '1917';
-const WHITE = '#fffdf7';
+const WHITE = CREAM; // one cream for all text (channelStyle)
 
 // Measured from the supplied 30fps reference. Some pairs intentionally begin
 // together, creating the brisk bursts visible in the original edit.
 const titleCharacterStarts = [7, 9, 10, 11, 11, 12, 13, 14, 14, 15, 16, 17, 18, 19, 20, 22, 24, 26, 29];
 // These are indexed in normal reading order for the default four-digit year.
 const yearCharacterStarts = [66, 59, 54, 50];
-
-const riseFromBelow = (frame:number, start:number, initialOffset = 100) =>
-  interpolate(frame, [start, start + 4], [initialOffset, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
 
 const titleStartAt = (index:number, length:number) => {
   if (length === lowerCopy.length) return titleCharacterStarts[index];
@@ -59,14 +53,17 @@ export const BalfourTag:React.FC<DocumentaryTypeOnLabelProps> = ({
   const frame = clock - revealShift;
   void zoomEnd; void zoomDurationFrames;
   const backgroundScale = backgroundZoom(clock);
+  // every letter is laid out from the start (the box keeps its width); the letters arrive in the references' motion
   const labelCharacters = [...title].map((character, index) => ({
     character,
     start: titleStartAt(index, title.length),
-  })).filter(({start}) => frame >= start);
+  }));
   const yearCharacters = [...suppliedYear].map((character, index) => ({
     character,
     start: yearStartAt(index, suppliedYear.length),
-  })).filter(({start}) => frame >= start);
+  }));
+  const labelOn = labelCharacters.length > 0 && frame >= Math.min(...labelCharacters.map((c) => c.start)) - 2;
+  const yearOn = yearCharacters.length > 0 && frame >= Math.min(...yearCharacters.map((c) => c.start)) - 2;
   return <AbsoluteFill style={{background:'#0e1012', overflow:'hidden'}}>
     {backgroundVideo ? <OffthreadVideo muted src={staticFile(backgroundVideo)} style={{
       position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
@@ -78,27 +75,21 @@ export const BalfourTag:React.FC<DocumentaryTypeOnLabelProps> = ({
       width:'100%', height:'100%', objectFit:'cover', objectPosition: backgroundPosition,
       transform: `scale(${backgroundScale})`, transformOrigin: backgroundPosition,
     }} />}
-    {labelCharacters.length > 0 ? <div style={{
+    {labelOn ? <div style={{
       position:'absolute', left:'50%', top:858, height:115,
       display:'inline-flex', alignItems:'center', overflow:'hidden', whiteSpace:'pre',
       color:WHITE, backgroundColor:CRIMSON, borderRadius:8, // same crimson as the year tag (user request 2026-10-07)
       boxSizing:'border-box', padding:'0 30px',
-      fontFamily:'Arial, Helvetica, sans-serif', fontWeight:700, fontSize:72,
+      fontFamily:FONT, fontWeight:600, fontSize:72,
       letterSpacing:4.7, lineHeight:1, transform:'translateX(-50%)',
-    }}>{labelCharacters.map(({character, start}, index) => <span key={`${character}-${index}`} style={{
-      display: 'inline-block',
-      transform: `translateY(${riseFromBelow(frame, start, 125)}%)`,
-    }}>{character === ' ' ? '\u00a0' : character}</span>)}</div> : null}
-    {yearCharacters.length > 0 ? <div style={{
+    }}><TagLetters text={title} frame={frame} start={Math.min(...labelCharacters.map((c) => c.start))} rtl={false} /></div> : null}
+    {yearOn ? <div style={{
       position:'absolute', right:177, top:100, height:115,
       display:'inline-flex', alignItems:'center', justifyContent:'flex-end', overflow:'hidden', whiteSpace:'pre',
       color:WHITE, backgroundColor:CRIMSON, borderRadius:8,
       boxSizing:'border-box', padding:'0 34px',
-      fontFamily:'Arial, Helvetica, sans-serif', fontWeight:700, fontSize:68,
+      fontFamily:FONT, fontWeight:600, fontSize:68,
       letterSpacing:-1.5, lineHeight:1,
-    }}>{yearCharacters.map(({character, start}, index) => <span key={`${character}-${index}`} style={{
-      display: 'inline-block',
-      transform: `translateY(${riseFromBelow(frame, start)}%)`,
-    }}>{character}</span>)}</div> : null}
+    }}><TagLetters text={suppliedYear} frame={frame} start={Math.min(...yearCharacters.map((c) => c.start))} rtl /></div> : null}
   </AbsoluteFill>;
 };

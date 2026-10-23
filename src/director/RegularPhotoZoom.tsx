@@ -60,7 +60,8 @@ const LensTreatment: React.FC<{image: string; transform: string; uniqueId: strin
   return (
     <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height="100%" style={{display: 'block'}}>
       <defs>
-        {/* Keep the image sharp: only the far corners receive lens softness. */}
+        {/* The channel look (Look.tsx) adds the grain, dots, RGB split and corner softness over every template; this
+            shot adds none of its own (the owner, 2026-10-23: one look everywhere). */}
         <radialGradient id={edgeFocus} cx="50%" cy="48%" rx="67%" ry="76%">
           <stop offset="0%" stopColor="#000" />
           <stop offset="57%" stopColor="#000" />
@@ -71,7 +72,7 @@ const LensTreatment: React.FC<{image: string; transform: string; uniqueId: strin
           <rect width={WIDTH} height={HEIGHT} fill={`url(#${edgeFocus})`} />
         </mask>
         <filter id={edgeBlur} x="-8%" y="-8%" width="116%" height="116%" colorInterpolationFilters="sRGB">
-          <feGaussianBlur stdDeviation="3.2" />
+          <feGaussianBlur stdDeviation="0" />
         </filter>
         <filter id={redChannel} colorInterpolationFilters="sRGB">
           <feColorMatrix values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" />
@@ -86,10 +87,10 @@ const LensTreatment: React.FC<{image: string; transform: string; uniqueId: strin
       <g transform={transform} mask={`url(#${edgeMask})`} filter={`url(#${edgeBlur})`}>
         <image href={image} x={rect.x} y={rect.y} width={rect.width} height={rect.height} preserveAspectRatio="none" />
       </g>
-      <g transform={`translate(.7 -.25) ${transform}`} mask={`url(#${edgeMask})`} filter={`url(#${redChannel})`} opacity=".055" style={{mixBlendMode: 'screen'}}>
+      <g transform={`translate(.7 -.25) ${transform}`} mask={`url(#${edgeMask})`} filter={`url(#${redChannel})`} opacity="0" style={{mixBlendMode: 'screen'}}>
         <image href={image} x={rect.x} y={rect.y} width={rect.width} height={rect.height} preserveAspectRatio="none" />
       </g>
-      <g transform={`translate(-.7 .25) ${transform}`} mask={`url(#${edgeMask})`} filter={`url(#${cyanChannel})`} opacity=".045" style={{mixBlendMode: 'screen'}}>
+      <g transform={`translate(-.7 .25) ${transform}`} mask={`url(#${edgeMask})`} filter={`url(#${cyanChannel})`} opacity="0" style={{mixBlendMode: 'screen'}}>
         <image href={image} x={rect.x} y={rect.y} width={rect.width} height={rect.height} preserveAspectRatio="none" />
       </g>
     </svg>
@@ -130,12 +131,12 @@ const RegularShot: React.FC<{shot: PhotoShot; startFrame: number; isLast: boolea
   const safeOrigin = `${(Number.isFinite(ox) ? ox : 0.5) * 100}% ${(Number.isFinite(oy) ? oy : 0.5) * 100}%`;
   const foreground = preserveWholeImage ? (
     <div style={{...safeForegroundFrame(shot.aspectRatio), overflow: 'visible', transform: `scale(${scale})`, transformOrigin: safeOrigin}}>
-      <Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(.8) contrast(1.055) brightness(.95) sepia(.045)', boxShadow: '0 0 60px rgba(0,0,0,.35)'}} />
+      <Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'none', boxShadow: '0 0 60px rgba(0,0,0,.35)'}} />
     </div>
   ) : shot.edgeTreatment === 'none' ? <Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: position, transform: `scale(${scale})`, transformOrigin: shot.pan ? '50% 50%' : shot.zoomOrigin ?? position}} /> : <LensTreatment image={image} transform={transform} uniqueId={`regular-lens-${startFrame}`} rect={coverRect(shot.aspectRatio, position)} />;
 
   return (
-    <AbsoluteFill style={{overflow: 'hidden', filter: 'saturate(.8) contrast(1.055) brightness(.95) sepia(.045)'}}>
+    <AbsoluteFill style={{overflow: 'hidden', filter: 'none'}}>
       {preserveWholeImage ? <AbsoluteFill style={{opacity: .42, filter: 'blur(100px) brightness(.46) saturate(.56)', transform: `scale(${1.18 * (1 + (scale - fromScale) * 0.5)})`}}><Img src={image} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: shot.objectPosition ?? '50% 16%'}} /></AbsoluteFill> : null}
       {foreground}
       <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 72% 78% at 50% 48%, transparent 53%, rgba(18,14,8,.025) 72%, rgba(0,0,0,.13) 100%)', pointerEvents: 'none'}} />

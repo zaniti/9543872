@@ -1,7 +1,7 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CRIMSON} from './channelStyle';
+import {CRIMSON, FONT, CREAM, TagLetters} from './channelStyle';
 
 export type PortraitYearTagProps = {
   background?: string;
@@ -12,12 +12,6 @@ export type PortraitYearTagProps = {
 } & TemplateTiming;
 
 const yearCharacterStarts = [70, 63, 59, 59];
-
-const riseFromBelow = (frame: number, start: number) =>
-  interpolate(frame, [start, start + 2], [100, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
 
 export const PortraitYearTag: React.FC<PortraitYearTagProps> = ({
   background = 'templates/portrait-year-clean.png',
@@ -35,7 +29,8 @@ export const PortraitYearTag: React.FC<PortraitYearTagProps> = ({
   const characters = [...year].map((character, index) => ({
     character,
     start: year.length === 4 ? yearCharacterStarts[index] : Math.round(59 + ((year.length - 1 - index) / Math.max(1, year.length - 1)) * 11),
-  })).filter(({start}) => frame >= start);
+  }));
+  const on = characters.length > 0 && frame >= Math.min(...characters.map((c) => c.start)) - 2;
 
   return <AbsoluteFill style={{background: '#101217', overflow: 'hidden'}}>
     {backgroundLayout === 'aspect-safe' ? <>
@@ -45,15 +40,13 @@ export const PortraitYearTag: React.FC<PortraitYearTagProps> = ({
       width: '100%', height: '100%', objectFit: 'cover', objectPosition: backgroundPosition,
       transform: `scale(${backgroundScale})`, transformOrigin: backgroundPosition,
     }} />}
-    {characters.length > 0 ? <div style={{
+    {on ? <div style={{
       position: 'absolute', right: 170, top: 95, height: 120,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden', whiteSpace: 'pre',
-      color: '#fffdf7', backgroundColor: CRIMSON, borderRadius: 8,
+      color: CREAM, backgroundColor: CRIMSON, borderRadius: 8,
       boxSizing: 'border-box', padding: '0 34px',
-      fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 700, fontSize: 68,
+      fontFamily: FONT, fontWeight: 600, fontSize: 68,
       letterSpacing: -1.5, lineHeight: 1,
-    }}>{characters.map(({character, start}, index) => <span key={`${character}-${index}`} style={{
-      display: 'inline-block', transform: `translateY(${riseFromBelow(frame, start)}%)`,
-    }}>{character}</span>)}</div> : null}
+    }}><TagLetters text={year} frame={frame} start={Math.min(...characters.map((c) => c.start))} rtl /></div> : null}
   </AbsoluteFill>;
 };
