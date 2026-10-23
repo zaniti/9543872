@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {CREAM, TagBox, clamp} from './channelStyle';
+import {CREAM, TagBox, clamp, textWidth} from './channelStyle';
 
 /**
  * T28 "story photo" (the owner's reference: a hook that tells one strong picture in several shots, 2026-10-21).
@@ -60,11 +60,14 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
   // the tag sits above the point, on the side facing the middle of the screen, never off screen
   // the tag sits left of the point (right = true) or right of it; the build sets `side` for tags aimed at a face
   const right = side ? side === 'left' : (settledX ?? px) > FRAME_W / 2;
-  const tagW = 26 * text.length + 60;
+  const tagW = textWidth(text, 56, 600) + 56, tagH = 87; // the house tag: 56 px Poppins SemiBold in an 87 px box
   // aimed at a face: the tag sits up and to the side of the head, clear of it, so the arrow has room to curve onto it
   const tx = Math.max(40, Math.min(FRAME_W - tagW - 40, face ? (right ? px - face.rx - 110 - tagW : px + face.rx + 110) : (right ? px - tagW - 170 : px + 170)));
-  const ty = Math.max(40, Math.min(FRAME_H - 120, face ? py - face.ry - 150 : py - 210));
-  const ax = right ? tx + tagW : tx, ay = ty + 38; // where the arrow leaves the tag
+  // above the point; when there is no room above (a point near the top of the frame), below it instead, never
+  // squeezed against the edge
+  const above = face ? py - face.ry - 150 : py - 210;
+  const ty = above >= 40 ? above : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
+  const ax = right ? tx + tagW : tx, ay = ty + tagH / 2; // where the arrow leaves the tag
   const draw = interpolate(t, [4, 18], [0, 1], clamp);
   let gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point
   if (face) {
@@ -108,14 +111,19 @@ export const StoryPhoto: React.FC<{src: string; aspect: number; shots: StoryShot
   const v = photoView(aspect, cam, 0.00045 * Math.max(0, clock));
   // detail reveal: the first detail starts soft and comes into focus, a dark vignette lifts as the camera pulls back
   const blur = focusPull ? interpolate(f, [0, 10], [3, 0], clamp) : 0; // on screen, in pixels: a light focus pull
-  const vignette = focusPull ? interpolate(cam.w, [20, 90], [0.75, 0.2], clamp) : 0;
+  const vignette = focusPull ? interpolate(cam.w, [20, 90], [0.4, 0], clamp) : 0; // light: the channel look adds its own
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Img src={staticFile(src)} style={{...v.style, filter: blur ? `blur(${blur / (v.W / (FRAME_W * 3))}px)` : undefined}} />
     {vignette ? <AbsoluteFill style={{background: `radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,${vignette}) 100%)`}} /> : null}
     {tags.map((t, i) => {
+      // a tag never arrives while the camera is still travelling (it would slide across the screen with the picture):
+      // it waits until the move that is under way when it is due has settled
+      const moving = shots.find((sh) => sh.at > 0 && sh.at <= t.at && t.at < sh.at + move);
+      const at = moving ? moving.at + move : t.at;
+      if (f < at) return null;
       const [px, py] = v.toScreen(t.x, t.y);
-      const [settledX] = photoView(aspect, camera(shots, t.at + move + 6, move)).toScreen(t.x, t.y);
-      return <PointerTag key={i} px={px} py={py} settledX={settledX} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined} text={t.text} t={f - t.at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
+      const [settledX] = photoView(aspect, camera(shots, at + 6, move)).toScreen(t.x, t.y);
+      return <PointerTag key={i} px={px} py={py} settledX={settledX} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined} text={t.text} t={f - at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
     })}
   </AbsoluteFill>;
 };
