@@ -161,7 +161,7 @@ export const CircleLabel: React.FC<{text: string; f: number; at: number}> = ({te
  * matters (`box`, % of the document: [x, y, w, h]), and that phrase is marked with a highlighter stroke in the channel
  * colour. Without a box it pushes gently into the middle of the page.
  */
-export const DocumentOverScene: React.FC<Bg & {doc: string; aspect: number; box?: [number, number, number, number]; marker?: string}> = ({background, backgroundVideo, backgroundPosition, doc, aspect, box, marker = '#ffe14d', revealShift = 0}) => {
+export const DocumentOverScene: React.FC<Bg & {doc: string; aspect: number; box?: number[]; marker?: string}> = ({background, backgroundVideo, backgroundPosition, doc, aspect, box, marker = '#ffe14d', revealShift = 0}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const p = interpolate(f, [8, 28], [0, 1], {easing: Easing.bezier(0.22, 0.78, 0.27, 1), ...clamp});
@@ -170,7 +170,7 @@ export const DocumentOverScene: React.FC<Bg & {doc: string; aspect: number; box?
   const zoomAt = 36;
   const z = interpolate(f, [zoomAt, zoomAt + 16], [0, 1], {...clamp, easing: Easing.inOut(Easing.cubic)});
   const flash = interpolate(f, [zoomAt, zoomAt + 2, zoomAt + 9], [0, 0.55, 0], clamp);
-  const [bx, by, bw, bh] = box ?? [20, 40, 60, 12];
+  const [bx, by, bw, bh, angle = 0] = box ?? [20, 40, 60, 12];  // angle: a line printed a little crooked (degrees)
   // the push: the phrase comes to the centre of the screen, about 2.2 times larger (never larger than the frame allows)
   const scale = 1 + z * Math.min(1.2, (1500 / (w * (bw / 100))) - 1);
   const fx = (bx + bw / 2) / 100 * w - w / 2, fy = (by + bh / 2) / 100 * h - h / 2;
@@ -187,8 +187,10 @@ export const DocumentOverScene: React.FC<Bg & {doc: string; aspect: number; box?
         <div style={{position: 'relative', width: w, height: h}}>
           <Img src={staticFile(doc)} style={{display: 'block', width: '100%', height: '100%', objectFit: 'cover', filter: `blur(${(1 - p) * 10}px) contrast(.95)`}} />
           {/* the same highlighter as the newspaper template (T27): exactly over the words found by OCR (build: find=) */}
-          {box ? <div style={{position: 'absolute', left: `calc(${bx}% - 4px)`, top: `calc(${by}% - 3px)`, width: `calc(${bw}% + 8px)`, height: `calc(${bh}% + 6px)`, background: marker,
-            opacity: 0.55, mixBlendMode: 'multiply', transform: `scaleX(${mark})`, transformOrigin: 'left center', borderRadius: 3}} /> : null}
+          {box ? <div style={{position: 'absolute', left: `calc(${bx}% - 4px)`, top: `calc(${by}% - 3px)`, width: `calc(${bw}% + 8px)`, height: `calc(${bh}% + 6px)`,
+            transform: `rotate(${angle}deg)`, transformOrigin: 'center center', mixBlendMode: 'multiply'}}>
+            <div style={{width: '100%', height: '100%', background: marker, opacity: 0.55, transform: `scaleX(${mark})`, transformOrigin: 'left center', borderRadius: 3}} />
+          </div> : null}
         </div>
       </div>
     </div>

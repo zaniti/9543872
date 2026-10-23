@@ -188,10 +188,12 @@ export const MapCircle: React.FC<Bg & {map: string; aspect: number; box: [number
 // ------------------------------------------------------------------ T27: document over a photo or film, one line highlighted
 
 /** `box` = the line to highlight, in percent [left, top, width, height] of the page (found by OCR). */
-export const DocumentMark: React.FC<Bg & {doc: string; aspect: number; box: [number, number, number, number]; marker?: string}> = ({background, backgroundVideo, doc, aspect, box, marker = '#ffe14d', backgroundPosition = '50% 50%', revealShift = 0}) => {
+export const DocumentMark: React.FC<Bg & {doc: string; aspect: number; box: number[]; marker?: string}> = ({background, backgroundVideo, doc, aspect, box, marker = '#ffe14d', backgroundPosition = '50% 50%', revealShift = 0}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
-  const [bx, by, bw, bh] = box;
+  // box: left, top, width, height (percent) and, for a line printed a little crooked, its angle in degrees (the band
+  // turns with the line about its centre, at the line's own height)
+  const [bx, by, bw, bh, angle = 0] = box;
   const {w, h} = fit(aspect, 1400, 860);
   const card = easeOut(f, 2, 16);
   const travel = easeInOut(f, 10, 48);
@@ -222,8 +224,11 @@ export const DocumentMark: React.FC<Bg & {doc: string; aspect: number; box: [num
         transform: `translate(${tx * travel}px, ${ty * travel}px) rotate(-.5deg) scale(${zoom})`,
         transformOrigin: `${ox}% ${oy}%`}}>
         <Img src={staticFile(doc)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'none'}} />
-        <div style={{position: 'absolute', left: `${bx - padX}%`, top: `${by - bh * 0.15}%`, width: `${bw + 2 * padX}%`, height: `${bh * 1.3}%`, background: marker,
-          mixBlendMode: 'multiply', opacity: 0.85, transform: `scaleX(${mark}) rotate(-.3deg)`, transformOrigin: 'left center', borderRadius: '2px 6px 3px 7px'}} />
+        <div style={{position: 'absolute', left: `${bx - padX}%`, top: `${by - bh * 0.15}%`, width: `${bw + 2 * padX}%`, height: `${bh * 1.3}%`,
+          transform: `rotate(${angle - 0.3}deg)`, transformOrigin: 'center center', mixBlendMode: 'multiply'}}>
+          <div style={{width: '100%', height: '100%', background: marker, opacity: 0.85, transform: `scaleX(${mark})`, transformOrigin: 'left center',
+            borderRadius: '2px 6px 3px 7px'}} />
+        </div>
         {/* the tape goes on the edge away from the marked line, never over it */}
         <div style={{opacity: 1 - travel}}><Tape style={oy < 30 ? {left: w / 2 - 75, bottom: -18} : {left: w / 2 - 75, top: -18}} rotate={2} /></div>
       </div>
