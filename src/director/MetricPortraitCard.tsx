@@ -14,6 +14,8 @@ export type MetricPortraitCardProps = {
   zoomDurationFrames?: number;
   /** Frames to delay the writing so the first figure lands on its spoken word. */
   revealShift?: number;
+  /** When the second line starts writing (after the shift): the build sets it so its figure lands on its word. */
+  secondStart?: number;
   portraitPosition?: string;
 };
 
@@ -55,7 +57,7 @@ export const MetricPortraitCard:React.FC<MetricPortraitCardProps> = ({
   paper='templates/clip6/paper-grid.jpg', portrait='templates/clip6/portrait.jpg',
   firstLead='Reclaim nearly', firstEmphasis='50,000 hectares', firstTail='of land',
   secondLead='Supported the establishment of almost', secondEmphasis='30 settlements', secondTail='',
-  zoomDurationFrames=214, revealShift=0, portraitPosition='right center',
+  zoomDurationFrames=214, revealShift=0, portraitPosition='right center', secondStart=104,
 }) => {
   const frame=useCurrentFrame()-revealShift;
   const portraitIn=reveal(frame,9,16);
@@ -70,7 +72,7 @@ export const MetricPortraitCard:React.FC<MetricPortraitCardProps> = ({
       <Sentence frame={frame} start={37} lead={firstLead} emphasis={firstEmphasis} tail={firstTail}/>
     </div>
     <div style={{position:'absolute',left:730,top:635,width:1080,fontFamily:FONT,fontWeight:500,fontSize:68,lineHeight:1.15,letterSpacing:-0.5,color:INK}}>
-      <Sentence frame={frame} start={104} lead={secondLead} emphasis={secondEmphasis} tail={secondTail} lineBreakAt={'Supported the establishment'.length}/>
+      <Sentence frame={frame} start={secondStart} lead={secondLead} emphasis={secondEmphasis} tail={secondTail} lineBreakAt={'Supported the establishment'.length}/>
     </div>
   </AbsoluteFill>;
 };

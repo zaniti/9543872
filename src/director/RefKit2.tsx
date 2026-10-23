@@ -102,10 +102,13 @@ export const NumberedSteps: React.FC<{background: string; position?: string; ste
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   // a gentle zig-zag: left, right, then back down the middle; arrows run between the words' edges, never through them
-  // measured on the references: 92 px capitals, the first two side by side high up, the next ones lower in the middle
-  const spots = [[560, 400], [1360, 400], [960, 700], [960, 950]];
+  // measured on the references: 92 px capitals, the first two side by side, the next ones lower in the middle; the
+  // rows are centred on the frame whatever the number of steps (the owner, 2026-10-23: four sat too low)
   const half = (s: string) => textWidth(s, 92, 800, 1) / 2; // exact half width of a step (92 px Poppins ExtraBold)
   const list = steps.slice(0, 4).map((x) => x.toUpperCase());
+  const rows = Math.max(1, list.length - 1), gap = rows >= 3 ? 260 : 290;
+  const y0 = 540 - ((rows - 1) * gap) / 2;
+  const spots = [[560, y0], [1360, y0], [960, y0 + gap], [960, y0 + 2 * gap]];
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Photo src={background} position={position} frame={clock} dim={0.6} />
     {badge ? <Badge text={badge} f={f} /> : null}
