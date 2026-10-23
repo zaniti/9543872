@@ -196,21 +196,24 @@ export const BetweenTwo: React.FC<{left: {src: string; aspect: number}; right: {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const side = (img: {src: string; aspect: number}, x: number, t: number, label?: string) => {
-    const w = 380, h = Math.min(480, w / img.aspect);
+    // two pictures alone are large (about two thirds of the height); with a middle picture they leave it room
+    const maxH = middle ? 480 : 660, maxW = middle ? 380 : 640;
+    const h = Math.min(maxH, maxW / img.aspect), w = h * img.aspect;
     const p = interpolate(f, [t, t + 10], [0, 1], {...clamp, easing: Easing.out(Easing.cubic)});
     if (f < t) return null;
     // with a middle picture the sides sit high (it rises between them); with only two, both are centred on the screen
-    const cy = middle ? 300 : 540 - 50;
+    const cy = middle ? 300 : 540 - 55;
     return <div style={{position: 'absolute', left: x - w / 2, top: cy - h / 2, width: w, opacity: Math.min(1, p * 1.5), filter: p < 1 ? `blur(${(1 - p) * 8}px)` : undefined}}>
       <Img src={staticFile(img.src)} style={{width: w, height: h, objectFit: 'cover', display: 'block', boxShadow: '0 10px 22px rgba(0,0,0,.25)'}} />
-      {label ? <div style={{marginTop: 24, textAlign: 'center'}}><TypeTag text={label} f={f} start={t + 8} size={48} /></div> : null}
+      {/* the label is centred on its picture, even when it is wider than the picture */}
+      {label ? <div style={{position: 'absolute', left: '50%', top: h + 24, transform: 'translateX(-50%)', whiteSpace: 'nowrap'}}><TypeTag text={label} f={f} start={t + 8} size={TAG} /></div> : null}
     </div>;
   };
   const mw = middle ? Math.min(420, 560 * middle.aspect) : 0, mh = middle ? mw / middle.aspect : 0;
   return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
     <Paper frame={clock} />
-    {side(left, middle ? 360 : 560, at[0] ?? 0, labels[0])}
-    {side(right, middle ? 1560 : 1360, at[1] ?? 24, labels[1])}
+    {side(left, middle ? 360 : 520, at[0] ?? 0, labels[0])}
+    {side(right, middle ? 1560 : 1400, at[1] ?? 24, labels[1])}
     {middle ? <div style={{position: 'absolute', left: 960 - mw / 2, top: 560 - mh / 2, width: mw, height: mh}}><Print src={middle.src} w={mw} h={mh} f={f} at={at[2] ?? 50} fit="contain" /></div> : null}
   </AbsoluteFill>;
 };
