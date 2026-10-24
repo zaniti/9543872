@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {CREAM, CRIMSON, RED, TEXT_RED, clamp, revealChar, textBase} from './channelStyle';
+import {CREAM, CRIMSON, RED, TEXT_RED, clamp, revealChar, textBase, useTopLeftInset} from './channelStyle';
 import {Background} from './VariantTemplates';
 import type {TemplateTiming} from './templateMotion';
 
@@ -229,13 +229,14 @@ export const Letterbox: React.FC<Bg & {place: string; year?: string; region?: st
 
 export const Dateline: React.FC<Bg & {place: string; year?: string; date?: string}> = ({background, backgroundVideo, backgroundPosition = '50% 50%', place, year = '', date = '', revealShift = 0}) => {
   const clock = useCurrentFrame();
+  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const f = clock - revealShift;
   const line = `${place.toUpperCase()} — ${(date || year).toUpperCase()}`;
   const typed = Math.max(0, Math.min(line.length, Math.floor((f - 8) * 1.5)));  // a teleprinter: about 45 letters a second
   const caret = typed < line.length || Math.floor(f / 8) % 2 === 0;
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
-    <div style={{position: 'absolute', left: 0, right: 0, top: 90, height: 110, background: 'rgba(8,8,8,.78)', clipPath: wipe(f, 0, 8)}}>
+    <div style={{position: 'absolute', left: 0, right: 0, top: 90 + inset, height: 110, background: 'rgba(8,8,8,.78)', clipPath: wipe(f, 0, 8)}}>
       <div style={{position: 'absolute', left: 0, top: 0, bottom: 0, width: 16, background: RED}} />
       <div style={{position: 'absolute', left: 140, top: 0, bottom: 0, display: 'flex', alignItems: 'center', ...textBase, color: WHITE,
         fontWeight: 700, fontSize: 46, letterSpacing: 5, whiteSpace: 'pre'}}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {CREAM, TagBox, clamp, textWidth} from './channelStyle';
+import {CREAM, TagBox, clamp, textWidth, useTopLeftInset, NO_AI_BOX} from './channelStyle';
 
 /**
  * T28 "story photo" (the owner's reference: a hook that tells one strong picture in several shots, 2026-10-21).
@@ -72,7 +72,10 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
   // decided once, where the camera settles (the slow drift must never flip the tag from below to above mid-shot)
   const ref = settledY ?? py;
   const roomAbove = (face ? ref - face.ry - 150 : ref - 210) >= 40;
-  const ty = roomAbove ? Math.max(40, face ? py - face.ry - 150 : py - 210) : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
+  const ty0 = roomAbove ? Math.max(40, face ? py - face.ry - 150 : py - 210) : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
+  // the No AI label's corner (first 20 s): a tag that would sit there goes just below it
+  const inset = useTopLeftInset();
+  const ty = inset && tx < NO_AI_BOX.right && ty0 < NO_AI_BOX.bottom ? NO_AI_BOX.bottom + 6 : ty0;
   const ax = right ? tx + tagW : tx, ay = ty + tagH / 2; // where the arrow leaves the tag
   const draw = interpolate(t, [4, 18], [0, 1], clamp);
   let gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point

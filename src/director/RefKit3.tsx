@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame, delayRender, continueRender} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, PAPER, RED, clamp, easeInOut, easeOut, paperFilter, paperVeil, textBase, textWidth} from './channelStyle';
+import {CREAM, PAPER, RED, clamp, easeInOut, easeOut, paperFilter, paperVeil, textBase, textWidth, useTopLeftInset, NO_AI_BOX} from './channelStyle';
 import {DrawnArrow, Reveal, TAG, TypeTag} from './RefKit';
 
 /** Where a tag of this text can sit so it stays fully on screen: its centre x, kept 40 px from both edges. */
@@ -42,7 +42,7 @@ type RegionLabel = {text: string; at: number; x: number; y: number; w: number; h
 /** Where each region's label goes, decided once on the unzoomed map: inside a large country, else beside the
  *  country, as close as it can be, clear of every lit country's real outline, every other label and every other
  *  label's line (lines never cross), and inside the frame even at the end of the slow zoom-in. */
-const regionLabels = (data: Country[], countries: {name: string; at: number; label?: string}[], Q: (lo: number, la: number) => number[], zoom: number): RegionLabel[] => {
+const regionLabels = (data: Country[], countries: {name: string; at: number; label?: string}[], Q: (lo: number, la: number) => number[], zoom: number, reserve = false): RegionLabel[] => {
   const z = (v: number, o: number) => (v - o) * zoom + o;
   const ZEND = 1.2;  // the map's zoom at the end of a long shot: labels must still be inside the frame then
   const find = (name: string) => data.find((d) => (d.n || '').toLowerCase() === name.toLowerCase() || (d.iso || '').toLowerCase() === name.toLowerCase());
@@ -111,6 +111,7 @@ const regionLabels = (data: Country[], countries: {name: string; at: number; lab
         let score = r;  // as close to its country as possible
         if (ze(b[0], 960) < 30 || ze(b[2], 960) > 1890 || ze(b[1], 540) < 30 || ze(b[3], 540) > 1050) score += 1e6;
         score += onLand(b) * 120;  // never on a lit country
+        if (reserve && overlap([z(b[0], 960), z(b[1], 540), z(b[2], 960), z(b[3], 540)], [0, 0, NO_AI_BOX.right, NO_AI_BOX.bottom]) > 0) score += 1e5;  // the No AI label
         points.forEach((q, qi) => { if (q && qi !== ci && gap(b, q) < 90) score += (90 - gap(b, q)) * 12; });
         placed.forEach((o) => { score += overlap(b, [o[0] - 16, o[1] - 10, o[2] + 16, o[3] + 10]) * 8; });
         leads.forEach(([p0, p1]) => { if (cross([px, py], [ax, ey], p0, p1)) score += 5000; });  // lines never cross
@@ -128,6 +129,7 @@ const regionLabels = (data: Country[], countries: {name: string; at: number; lab
 
 export const RegionsMap: React.FC<{view: [number, number, number, number]; countries: {name: string; at: number; label?: string}[]; revealShift?: number}> = ({view, countries, revealShift = 0}) => {
   const clock = useCurrentFrame();
+  const inset = useTopLeftInset();  // keep the No AI label's corner free in the first 20 s
   const f = clock - revealShift;
   const [data, setData] = React.useState<Country[] | null>(COUNTRIES);
   const [wait] = React.useState(() => (COUNTRIES ? null : delayRender('countries')));
@@ -200,7 +202,7 @@ export const RegionsMap: React.FC<{view: [number, number, number, number]; count
         </g>;
       })}
     </svg>
-    {data ? regionLabels(data, countries, Q, 1).map((L0, i) => {
+    {data ? regionLabels(data, countries, Q, 1, inset > 0).map((L0, i) => {
       // placed once on the map (never re-decided as the map zooms: EDO FOLKLORE jumped to another spot mid-shot), then
       // carried by the slow zoom with the countries
       const z = (v: number, o: number) => (v - o) * zoom + o;

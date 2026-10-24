@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, PAPER, RED, RevealText, TEXT_ON_PAPER, TagBox, clamp, easeInOut, easeOut, paperFilter, paperVeil, textBase, textWidth} from './channelStyle';
+import {CREAM, PAPER, RED, RevealText, TEXT_ON_PAPER, TagBox, clamp, easeInOut, easeOut, paperFilter, paperVeil, textBase, textWidth, useTopLeftInset} from './channelStyle';
 
 /**
  * The reference kit (the owner's reference channels, studied frame by frame on 2026-10-22), in the channel's own theme:
@@ -55,7 +55,8 @@ export const DrawnArrow: React.FC<{x1: number; y1: number; x2: number; y2: numbe
 export const Badge: React.FC<{text: string; f: number; at?: number}> = ({text, f, at = 0}) => {
   const n = /^\d$/.test(text) ? `0${text}` : text;
   const line = easeOut(f, at, at + 8);
-  return <div style={{position: 'absolute', left: 96, top: 86, display: 'flex', alignItems: 'center', gap: 18, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,.5))'}}>
+  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
+  return <div style={{position: 'absolute', left: 96, top: 86 + inset, display: 'flex', alignItems: 'center', gap: 18, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,.5))'}}>
     <div style={{width: 4, height: 58, background: RED, borderRadius: 2, transform: `scaleY(${line})`, transformOrigin: 'top'}} />
     <div style={{...textBase, fontWeight: 600, fontSize: 52, lineHeight: 1, letterSpacing: 3, color: CREAM, whiteSpace: 'pre'}}><RevealText text={n} frame={f} start={at + 5} /></div>
   </div>;
@@ -111,6 +112,7 @@ export const YearTagRef: React.FC<{background: string; position?: string; year: 
   const clock = useCurrentFrame();
   const f = clock - revealShift;
   const t0 = 8;
+  const inset = useTopLeftInset();
   // dates are written with a comma after the month: "October, 1975" and "October 24, 1975" (the owner, 2026-10-23)
   year = year.replace(/^([A-Za-z]+\.?)\s+(\d{3,4})$/, '$1, $2').replace(/^([A-Za-z]+\.?\s+\d{1,2})\s+(\d{3,4})$/, '$1, $2');
   const lineStart = t0 + year.length + 6, lineEnd = lineStart + 10;
@@ -118,7 +120,7 @@ export const YearTagRef: React.FC<{background: string; position?: string; year: 
   const dim = figure ? interpolate(f, [fig - 4, fig + 8], [0, 0.42], clamp) : 0;
   return <AbsoluteFill style={{background: '#0d0d0d', overflow: 'hidden'}}>
     <Backdrop src={background} position={position} frame={clock} dim={dim} />
-    {yearEnd ? <div style={{position: 'absolute', top: 100, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+    {yearEnd ? <div style={{position: 'absolute', top: 100 + inset, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
       <TypeTag text={year} f={f} start={t0} size={TAG_BIG} />
       <svg width={470} height={40} style={{overflow: 'visible', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.45))'}}>
         <line x1={34} y1={20} x2={34 + 396 * easeInOut(f, lineStart, lineEnd)} y2={20} stroke={CREAM} strokeWidth={5} strokeLinecap="round" />

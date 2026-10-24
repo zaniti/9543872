@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Audio, CalculateMetadataFunction, Easing, Sequence, continueRender, delayRender, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {BeatView, ENTER_FRAMES, Premount, type Beat} from './BeatView';
 import {ReviewSubtitles, type SubtitleCue} from './ReviewSubtitles';
-import {FONT_FILES, PaperGround, SharedBoard, applyTheme, setLanguage, type Theme} from './channelStyle';
+import {FONT_FILES, PaperGround, SharedBoard, applyTheme, setLanguage, type Theme, TopLeftInset, NO_AI_BOX} from './channelStyle';
 import {LookFilter} from './Look';
 
 /** One director job: written by engine/build_project.py to jobs/<id>/edit.json and passed in as props. */
@@ -27,6 +27,23 @@ export const jobMetadata: CalculateMetadataFunction<JobProps> = ({props}) => ({d
 const BOARD_MODES = new Set(['T4', 'T7', 'T12', 'T16', 'T17', 'T24', 'T25', 'T41', 'T42', 'T44']);
 const isBoard = (b: Beat) => BOARD_MODES.has(b.mode) || (b.mode === 'T38' && !b.assets.some((a) => a.layout !== 'template-card'));
 const CLEAR_FRAMES = 12;
+
+// "No AI generated content used": top left for the first 20 s of every video, in the narration's language (the owner,
+// 2026-10-24). Drawn over the film look so it stays crisp.
+const NO_AI: Record<string, string> = {
+  en: 'NO AI GENERATED CONTENT USED', es: 'SIN CONTENIDO GENERADO POR IA', fr: 'AUCUN CONTENU GÉNÉRÉ PAR IA',
+  de: 'KEINE KI-GENERIERTEN INHALTE', pt: 'SEM CONTEÚDO GERADO POR IA', it: 'NESSUN CONTENUTO GENERATO DA IA',
+};
+const NO_AI_FRAMES = 20 * 30;
+const NoAiLabel: React.FC<{language?: string}> = ({language}) => {
+  const f = useCurrentFrame();
+  const o = interpolate(f, [12, 24, NO_AI_FRAMES - 18, NO_AI_FRAMES], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  if (o <= 0) return null;
+  const text = NO_AI[(language || 'en').slice(0, 2).toLowerCase()] ?? NO_AI.en;
+  return <div style={{position: 'absolute', left: 54, top: 46, opacity: o, transform: `translateY(${(1 - o) * -8}px)`, padding: '13px 24px',
+    background: 'rgba(255,255,255,.94)', borderRadius: 16, boxShadow: '0 4px 18px rgba(0,0,0,.25)', color: '#2b2b2b',
+    fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 700, fontSize: 31, letterSpacing: 0.4, whiteSpace: 'pre'}}>{text}</div>;
+};
 
 /** The shared board: the same paper the templates draw, with one slow zoom across the whole run. */
 const BoardLayer: React.FC = () => <PaperGround frame={useCurrentFrame()} force />;
@@ -71,14 +88,17 @@ export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles,
     const scenes = [...boards, ...beats.map((beat, i) => <Sequence key={beat.id} from={beat.startFrame}
       durationInFrames={beat.durationFrames + (linked(i) ? 0 : ENTER_FRAMES[(beats[i + 1]?.data?.enter as string) ?? ''] ?? 0)} name={`${beat.id} ${beat.mode}`}
       premountFor={premount}>
+      <TopLeftInset.Provider value={beat.startFrame < NO_AI_FRAMES ? NO_AI_BOX.bottom - 40 : 0}>
       {linked(i) ? <SharedBoard.Provider value={true}>
         <BoardClear frames={beat.durationFrames} clear={!!onBoard[i + 1]}><BeatView beat={beat} noEnter /></BoardClear>
       </SharedBoard.Provider> : <BeatView beat={beat} />}
+      </TopLeftInset.Provider>
     </Sequence>)];
     // the channel's finishing look over every scene (text included); none when the channel has not set one
     return theme?.look ? <LookFilter look={theme.look}>{scenes}</LookFilter> : scenes;
   })()}
   </Premount.Provider>
+  <NoAiLabel language={language} />
   {showSubtitles && subtitles ? <ReviewSubtitles cues={subtitles} /> : null}
 </AbsoluteFill>;
 };

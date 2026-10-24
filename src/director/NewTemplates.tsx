@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame} from 'remotion';
-import {CRIMSON, INK, PaperGround, RED, RevealText, TEXT_ON_PAPER, RiseWords, TagBox, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase, useBoardBg} from './channelStyle';
+import {CRIMSON, INK, PaperGround, RED, RevealText, TEXT_ON_PAPER, RiseWords, TagBox, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase, useBoardBg, useTopLeftInset} from './channelStyle';
 
 /** A real photo as a print on the paper: white border, slight tilt, drops in from below and settles. */
 const Print: React.FC<{src: string; x: number; y: number; w: number; h: number; frame: number; start: number; tilt?: number; position?: string; border?: number}> = ({src, x, y, w, h, frame, start, tilt = 0, position = '50% 35%', border = 14}) => {
@@ -21,6 +21,7 @@ export type TimelineStripProps = {heading: string; events: TimelineEvent[]; reve
 /** T24 — a run of dated events: an ink line draws across the paper, each event drops in as a print with its red year. */
 export const TimelineStrip: React.FC<TimelineStripProps> = ({heading, events, revealShift = 0}) => {
   const frame = useCurrentFrame() - revealShift;
+  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const n = events.length;
   const left = 330, right = 1590, lineY = 690; // the outer captions (400 wide) stay 130 px inside the frame
   const line = easeInOut(frame, 8, 38);
@@ -29,7 +30,7 @@ export const TimelineStrip: React.FC<TimelineStripProps> = ({heading, events, re
   return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#e7e7d9')}}>
     <PaperGround frame={frame} />
     {/* the house heading on paper (as T41): 80 px SemiBold ink */}
-    <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', color: INK, ...textBase, fontWeight: 600, fontSize: 80, lineHeight: 1.2,
+    <div style={{position: 'absolute', top: 70 + inset, left: 0, right: 0, textAlign: 'center', color: INK, ...textBase, fontWeight: 600, fontSize: 80, lineHeight: 1.2,
       }}><RevealText text={heading} frame={frame} start={0} />{void headIn}</div>
     <svg width="1920" height="1080" style={{position: 'absolute', inset: 0}}>
       <line x1={left - 60} y1={lineY} x2={left - 60 + (right - left + 120) * line} y2={lineY} stroke={INK} strokeWidth={6} strokeLinecap="round" />
@@ -63,6 +64,7 @@ export type CompareBarsProps = {heading: string; rows: CompareRow[]; prefix?: st
 /** T25 — two or three amounts side by side: each row's print, a flat bar growing to its share, the figure counting up at its tip. */
 export const CompareBars: React.FC<CompareBarsProps> = ({heading, rows, prefix = '', suffix = '', note, revealShift = 0}) => {
   const frame = useCurrentFrame() - revealShift;
+  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const max = Math.max(...rows.map((r) => r.value));
   const headIn = easeOut(frame, 0, 14);
   const rowH = rows.length > 2 ? 230 : 280;
@@ -71,7 +73,7 @@ export const CompareBars: React.FC<CompareBarsProps> = ({heading, rows, prefix =
   const lastAt = Math.max(...rows.map((r, i) => r.at ?? 18 + i * 34));
   return <AbsoluteFill style={{overflow: 'hidden', background: '#e7e7d9'}}>
     <PaperGround frame={frame} />
-    <div style={{position: 'absolute', top: 80, left: 0, right: 0, textAlign: 'center', color: TEXT_ON_PAPER, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
+    <div style={{position: 'absolute', top: 80 + inset, left: 0, right: 0, textAlign: 'center', color: TEXT_ON_PAPER, ...textBase, fontWeight: 700, fontSize: 76, letterSpacing: -0.5,
       }}><RevealText text={heading} frame={frame} start={0} />{void headIn}</div>
     {rows.map((r, i) => {
       const at = r.at ?? 18 + i * 34;
