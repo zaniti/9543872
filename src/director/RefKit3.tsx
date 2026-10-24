@@ -34,6 +34,98 @@ let COUNTRIES: Country[] | null = null;
 
 /** A dark map of a region (lon/lat box); the named countries light up one after another in the channel colour, each
  *  with a small typed tag; the camera drifts slowly. Countries by name or ISO code ("United Kingdom", "GBR"). */
+const LABEL_SIZE = 38;
+
+type RegionLabel = {text: string; at: number; x: number; y: number; w: number; h: number; px: number; py: number; ax: number; ay: number;
+  lead: boolean; align: 'flex-start' | 'center' | 'flex-end'};
+
+/** Where each region's label goes, decided once on the unzoomed map: inside a large country, else beside the
+ *  country, as close as it can be, clear of every lit country's real outline, every other label and every other
+ *  label's line (lines never cross), and inside the frame even at the end of the slow zoom-in. */
+const regionLabels = (data: Country[], countries: {name: string; at: number; label?: string}[], Q: (lo: number, la: number) => number[], zoom: number): RegionLabel[] => {
+  const z = (v: number, o: number) => (v - o) * zoom + o;
+  const ZEND = 1.2;  // the map's zoom at the end of a long shot: labels must still be inside the frame then
+  const find = (name: string) => data.find((d) => (d.n || '').toLowerCase() === name.toLowerCase() || (d.iso || '').toLowerCase() === name.toLowerCase());
+  type Box = [number, number, number, number];
+  type Ring = {pts: number[][]; box: Box};
+  const ringsOf = (c: Country): Ring[] => c.r.map((ring) => {
+    const pts = ring.map(([lo, la]) => { const [x, y] = Q(lo, la); return [z(x, 960), z(y, 540)]; });
+    const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+    return {pts, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] as Box};
+  });
+  const lit = countries.map((c) => find(c.name)).filter((d): d is Country => !!d).flatMap(ringsOf).filter((r) => r.box[2] > -100 && r.box[0] < 2020);
+  const inside = (x: number, y: number) => lit.some((r) => {
+    if (x < r.box[0] || x > r.box[2] || y < r.box[1] || y > r.box[3]) return false;
+    let hit = false;
+    for (let a = 0, b = r.pts.length - 1; a < r.pts.length; b = a++) {
+      const [xa, ya] = r.pts[a], [xb, yb] = r.pts[b];
+      if ((ya > y) !== (yb > y) && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa) hit = !hit;
+    }
+    return hit;
+  });
+  const onLand = (b: Box) => {  // how much of the label's box covers a lit country (sampled)
+    let n = 0;
+    for (let ix = 0; ix <= 6; ix++) for (let iy = 0; iy <= 2; iy++) if (inside(b[0] + ((b[2] - b[0]) * ix) / 6, b[1] + ((b[3] - b[1]) * iy) / 2)) n++;
+    return n;
+  };
+  const cross = (a: number[], b: number[], c: number[], d: number[]) => {
+    const o = (p: number[], q: number[], r: number[]) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+  };
+  const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+  const ze = (v: number, o: number) => (v - o) * ZEND + o;
+  const placed: Box[] = [];
+  const leads: number[][][] = [];
+  const out: RegionLabel[] = [];
+  // every country's own point, so a label never sits beside another country (it would read as that country's name)
+  const points = countries.map((c) => {
+    const d = find(c.name);
+    const rs = d ? ringsOf(d).filter((r) => r.box[2] > -100 && r.box[0] < 2020) : [];
+    if (!rs.length) return null;
+    const m = rs.reduce((a, b) => ((b.box[2] - b.box[0]) * (b.box[3] - b.box[1]) > (a.box[2] - a.box[0]) * (a.box[3] - a.box[1]) ? b : a));
+    return [m.pts.reduce((a, q) => a + q[0], 0) / m.pts.length, m.pts.reduce((a, q) => a + q[1], 0) / m.pts.length];
+  });
+  const gap = (b: Box, q: number[]) => Math.hypot(Math.max(b[0] - q[0], 0, q[0] - b[2]), Math.max(b[1] - q[1], 0, q[1] - b[3]));
+  countries.forEach((c, ci) => {
+    const d = find(c.name);
+    if (!d || !c.label) return;
+    const rings = ringsOf(d).filter((r) => r.box[2] > -100 && r.box[0] < 2020);
+    if (!rings.length) return;
+    const main = rings.reduce((a, b) => ((b.box[2] - b.box[0]) * (b.box[3] - b.box[1]) > (a.box[2] - a.box[0]) * (a.box[3] - a.box[1]) ? b : a));
+    const px = main.pts.reduce((a, q) => a + q[0], 0) / main.pts.length, py = main.pts.reduce((a, q) => a + q[1], 0) / main.pts.length;
+    const w = textWidth(c.label, LABEL_SIZE, 600, 2) + 8, h = LABEL_SIZE * 1.3;
+    const big = (main.box[2] - main.box[0]) > w * 1.25 && (main.box[3] - main.box[1]) > h * 2.2;
+    if (big) {  // the label fits inside the country with room around it: no line needed
+      const b: Box = [px - w / 2, py - h / 2, px + w / 2, py + h / 2];
+      placed.push(b);
+      out.push({text: c.label, at: c.at, x: b[0], y: b[1], w, h, px, py, ax: px, ay: py, lead: false, align: 'center'});
+      return;
+    }
+    let best: {score: number; b: Box; ax: number; ay: number; align: RegionLabel['align']} | null = null;
+    for (const r of [60, 90, 130, 180, 240, 320]) {
+      for (let a = 0; a < 24; a++) {
+        const th = (a / 24) * Math.PI * 2, ex = px + r * Math.cos(th), ey = py + r * Math.sin(th);
+        const right = Math.cos(th) >= 0;
+        const b: Box = [right ? ex : ex - w, ey - h / 2, right ? ex + w : ex, ey + h / 2];
+        const ax = right ? b[0] - 6 : b[2] + 6;
+        let score = r;  // as close to its country as possible
+        if (ze(b[0], 960) < 30 || ze(b[2], 960) > 1890 || ze(b[1], 540) < 30 || ze(b[3], 540) > 1050) score += 1e6;
+        score += onLand(b) * 120;  // never on a lit country
+        points.forEach((q, qi) => { if (q && qi !== ci && gap(b, q) < 90) score += (90 - gap(b, q)) * 12; });
+        placed.forEach((o) => { score += overlap(b, [o[0] - 16, o[1] - 10, o[2] + 16, o[3] + 10]) * 8; });
+        leads.forEach(([p0, p1]) => { if (cross([px, py], [ax, ey], p0, p1)) score += 5000; });  // lines never cross
+        placed.forEach((o) => { if (cross([px, py], [ax, ey], [o[0], o[1]], [o[2], o[3]]) || cross([px, py], [ax, ey], [o[0], o[3]], [o[2], o[1]])) score += 3000; });
+        if (!best || score < best.score) best = {score, b, ax, ay: ey, align: right ? 'flex-start' : 'flex-end'};
+      }
+    }
+    if (!best) return;
+    placed.push(best.b);
+    leads.push([[px, py], [best.ax, best.ay]]);
+    out.push({text: c.label, at: c.at, x: best.b[0], y: best.b[1], w, h, px, py, ax: best.ax, ay: best.ay, lead: true, align: best.align});
+  });
+  return out;
+};
+
 export const RegionsMap: React.FC<{view: [number, number, number, number]; countries: {name: string; at: number; label?: string}[]; revealShift?: number}> = ({view, countries, revealShift = 0}) => {
   const clock = useCurrentFrame();
   const f = clock - revealShift;
@@ -69,14 +161,16 @@ export const RegionsMap: React.FC<{view: [number, number, number, number]; count
         <linearGradient id="litMetal" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1920" y2="1080">
           <stop offset="0" stopColor={LIT_HI} /><stop offset="0.45" stopColor={LIT} /><stop offset="0.7" stopColor={LIT_HI} /><stop offset="1" stopColor={LIT_LO} />
         </linearGradient>
-        <filter id="litGlow" x="-20%" y="-20%" width="140%" height="140%">
+        {/* glow and burst areas cover the whole frame: sized to the country, a small one (Iceland) cut its glow into a
+            square (the owner, 2026-10-24) */}
+        <filter id="litGlow" filterUnits="userSpaceOnUse" x="-300" y="-300" width="2520" height="1680">
           <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="b" />
           <feFlood floodColor={LIT_HI} floodOpacity="0.75" />
           <feComposite in2="b" operator="in" result="g" />
           <feMerge><feMergeNode in="g" /><feMergeNode in="g" /></feMerge>
         </filter>
         {/* the burst when a country lights up: a wide, bright glow (the owner: "a clicking glow, then reduce it") */}
-        <filter id="litBurst" x="-40%" y="-40%" width="180%" height="180%">
+        <filter id="litBurst" filterUnits="userSpaceOnUse" x="-300" y="-300" width="2520" height="1680">
           <feGaussianBlur in="SourceAlpha" stdDeviation="26" result="b" />
           <feFlood floodColor={LIT_HI} floodOpacity="1" />
           <feComposite in2="b" operator="in" result="g" />
@@ -106,17 +200,29 @@ export const RegionsMap: React.FC<{view: [number, number, number, number]; count
         </g>;
       })}
     </svg>
-    {data ? countries.map((c, i) => {
-      const hit = data.find((d) => (d.n || '').toLowerCase() === c.name.toLowerCase() || (d.iso || '').toLowerCase() === c.name.toLowerCase());
-      if (!hit || !c.label) return null;
-      // the tag sits at the middle of the country's largest outline
-      const ring = hit.r.reduce((a, b) => (b.length > a.length ? b : a), hit.r[0]);
-      const pts = ring.map(([lo, la]) => Q(lo, la));
-      const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    {data ? regionLabels(data, countries, Q, 1).map((L0, i) => {
+      // placed once on the map (never re-decided as the map zooms: EDO FOLKLORE jumped to another spot mid-shot), then
+      // carried by the slow zoom with the countries
       const z = (v: number, o: number) => (v - o) * zoom + o;
-      return <div key={i} style={{position: 'absolute', left: tagCentre(z(cx, 960), c.label), top: Math.max(70, Math.min(1010, z(cy, 540))), transform: 'translate(-50%, -50%)'}}>
-        <TypeTag text={c.label} f={f} start={c.at + 6} size={TAG} />
-      </div>;
+      const L = {...L0, x: z(L0.x + L0.w / 2, 960) - L0.w / 2, y: z(L0.y + L0.h / 2, 540) - L0.h / 2, px: z(L0.px, 960), py: z(L0.py, 540),
+        ax: z(L0.ax, 960), ay: z(L0.ay, 540)};
+      // labels never sit on a lit country (the owner, 2026-10-24: SAGAS, INQUISITION, MERCHANT DIARIES hid Iceland,
+      // Spain and the Netherlands): a small country gets a dot and a thin line to its label in empty space; a large one
+      // carries its label inside itself. Light type, no box.
+      const p = interpolate(f, [L.at + 4, L.at + 12], [0, 1], clamp);
+      if (p <= 0) return null;
+      return <React.Fragment key={i}>
+        {L.lead ? <svg width={1920} height={1080} style={{position: 'absolute', inset: 0, opacity: p}}>
+          <line x1={L.px} y1={L.py} x2={L.px + (L.ax - L.px) * p} y2={L.py + (L.ay - L.py) * p} stroke={CREAM} strokeWidth={2} strokeOpacity={0.85} />
+          <circle cx={L.px} cy={L.py} r={6} fill={CREAM} />
+          <circle cx={L.px} cy={L.py} r={11} fill="none" stroke={CREAM} strokeWidth={1.5} strokeOpacity={0.6} />
+        </svg> : null}
+        <div style={{position: 'absolute', left: L.x, top: L.y, width: L.w, height: L.h, display: 'flex', alignItems: 'center',
+          justifyContent: L.align, ...textBase, fontWeight: 600, fontSize: LABEL_SIZE, letterSpacing: 2, color: CREAM, whiteSpace: 'pre',
+          textShadow: '0 2px 10px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.9)'}}>
+          <span style={{whiteSpace: 'pre'}}><Reveal text={L.text} f={f} start={L.at + 8} /></span>
+        </div>
+      </React.Fragment>;
     }) : null}
   </AbsoluteFill>;
 };
