@@ -101,8 +101,10 @@ export const EvidenceBoard: React.FC<{items: BoardItem[]; visits: number[]; dura
           <Img src={staticFile(p.src)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: 'none'}} />
           <div style={{position: 'absolute', left: '50%', top: -16, width: 44, height: 44, marginLeft: -22, borderRadius: '50%',
             background: `radial-gradient(circle at 35% 35%, #ff6b5e, ${RED})`, boxShadow: '0 5px 7px rgba(0,0,0,.45)'}} />
-          {p.label ? <div style={{position: 'absolute', left: -60, right: -60, bottom: -96, textAlign: 'center', ...textBase, fontWeight: 800,
-            fontSize: 62, color: INK}}>{p.label}</div> : null}
+          {/* the label hangs from the picture's bottom edge: a second line goes further down, never up into the picture
+              (the owner, 2026-10-24: "A GENTLEMAN IN BLACK" wrapped onto the photo) */}
+          {p.label ? <div style={{position: 'absolute', left: -60, right: -60, top: 'calc(100% + 22px)', textAlign: 'center', ...textBase, fontWeight: 800,
+            fontSize: 62, lineHeight: 1.15, color: INK}}>{p.label}</div> : null}
         </div>;
       })}
     </div>
