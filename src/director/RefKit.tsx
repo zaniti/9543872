@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, PAPER, RED, RevealText, TEXT_ON_PAPER, TagBox, clamp, easeInOut, easeOut, paperFilter, paperVeil, textBase} from './channelStyle';
+import {CREAM, PAPER, RED, RevealText, TEXT_ON_PAPER, TagBox, clamp, easeInOut, easeOut, paperFilter, paperVeil, textBase, textWidth} from './channelStyle';
 
 /**
  * The reference kit (the owner's reference channels, studied frame by frame on 2026-10-22), in the channel's own theme:
@@ -78,11 +78,13 @@ const tornClip = (w: number, h: number, seed: number) => {
 export const TornPrint: React.FC<{src: string; w: number; h: number; position?: string; name?: string; nameAt?: number; nameSize?: number; f: number; seed?: number}> = ({src, w, h, position, name, nameAt = 0, nameSize = 38, f, seed = 1}) => {
   const pad = Math.round(w * 0.04), bottom = Math.round(nameSize * 2.6);
   const W = w + 2 * pad, H = h + pad + bottom;
+  // a long name shrinks to stay inside the print with a margin (the owner, 2026-10-24: CHRISTOPHER MARLOWE ran past the edges)
+  const size = name ? Math.min(nameSize, Math.floor(nameSize * (W - 4 * pad) / Math.max(1, textWidth(name, nameSize, 700)))) : nameSize;
   return <div style={{position: 'relative', width: W, height: H, filter: 'drop-shadow(0 14px 22px rgba(0,0,0,.3))'}}>
     <div style={{position: 'absolute', inset: 0, background: '#f7f4ec', clipPath: tornClip(W, H, seed)}}>
       <Img src={staticFile(src)} style={{position: 'absolute', left: pad, top: pad, width: w, height: h, objectFit: 'cover', objectPosition: position ?? '50% 25%', display: 'block'}} />
       {name ? <div style={{position: 'absolute', left: 0, right: 0, top: pad + h, height: bottom, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        ...textBase, fontWeight: 700, fontSize: nameSize, color: TEXT_ON_PAPER, whiteSpace: 'pre'}}>
+        ...textBase, fontWeight: 700, fontSize: size, color: TEXT_ON_PAPER, whiteSpace: 'pre'}}>
         <span style={{position: 'relative'}}><span style={{visibility: 'hidden'}}>{name}</span>
           <span style={{position: 'absolute', left: 0, top: 0}}><Reveal text={name} f={f} start={nameAt} /></span></span>
       </div> : null}
