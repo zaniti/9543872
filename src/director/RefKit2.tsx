@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, INK, PAPER, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, paperFilter, paperVeil, textBase, textWidth, useBoardBg} from './channelStyle';
+import {CREAM, INK, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, textBase, textWidth, useBoardBg} from './channelStyle';
 import {Badge, DrawnArrow, Reveal, TAG, TAG_BIG, TornPrint, TypeTag} from './RefKit';
 
 /**
