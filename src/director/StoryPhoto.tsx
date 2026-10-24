@@ -52,9 +52,13 @@ export const photoView = (aspect: number, cam: {cx: number; cy: number; w: numbe
 /** `settledX`: where the point is on screen once the camera has stopped; the tag picks its side from it once, so it never
  *  jumps from one side to the other while the camera is still moving. */
 export const PointerTag: React.FC<{px: number; py: number; text: string; t: number; opacity?: number; settledX?: number; settledY?: number; side?: 'left' | 'right';
-  face?: {rx: number; ry: number}}> = ({px, py, text, t, opacity = 1, settledX, settledY, side, face}) => {
-  // a tag only points at what is on screen (the build rejects a tag whose point is outside its shot)
-  if (t < 0 || opacity <= 0 || px < 80 || px > FRAME_W - 80 || py < 80 || py > FRAME_H - 80) return null;
+  face?: {rx: number; ry: number}; textT?: number}> = ({px, py, text, t, opacity = 1, settledX, settledY, side, face, textT}) => {
+  // a tag only points at what is on screen (the build rejects a tag whose point is outside its shot). Decided where the
+  // camera settles, then kept while the point is still in the frame: the slow drift carrying a point past the 80 px
+  // margin made the tag vanish and come back (the owner, 2026-10-24, AGENT at 32:41)
+  const sx = settledX ?? px, sy = settledY ?? py;
+  if (t < 0 || opacity <= 0 || sx < 80 || sx > FRAME_W - 80 || sy < 80 || sy > FRAME_H - 80
+      || px < 0 || px > FRAME_W || py < 0 || py > FRAME_H) return null;
   const show = interpolate(t, [0, 8], [0, 1], {...clamp, easing: Easing.out(Easing.back(1.6))});
   const o = Math.min(show, opacity);
   // the tag sits above the point, on the side facing the middle of the screen, never off screen
@@ -87,7 +91,7 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
       {draw >= 1 ? <path d={`M ${gx} ${gy} l ${-22 * Math.cos(ang - 0.45)} ${-22 * Math.sin(ang - 0.45)} M ${gx} ${gy} l ${-22 * Math.cos(ang + 0.45)} ${-22 * Math.sin(ang + 0.45)}`}
         stroke={CREAM} strokeWidth={5} strokeLinecap="round" fill="none" /> : null}
     </svg>
-    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={right ? 'right center' : 'left center'} t={t} />
+    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={right ? 'right center' : 'left center'} t={textT ?? t} />
   </>;
 };
 
@@ -104,6 +108,19 @@ export const RedTag: React.FC<{text: string; left: number; top: number; show: nu
 
 export const tagOpacity = (f: number, until: number) => interpolate(f, [until - 6, until], [1, 0], clamp);
 
+/** Tags at the same point, each starting as the one before ends, are one tag whose word changes. */
+const tagChains = (tags: StoryTag[]): StoryTag[][] => {
+  const out: StoryTag[][] = [];
+  for (const t of [...tags].sort((a, b) => a.at - b.at)) {
+    const chain = out.find((c) => {
+      const last = c[c.length - 1];
+      return Math.abs(last.x - t.x) < 2 && Math.abs(last.y - t.y) < 2 && last.until !== undefined && t.at <= last.until + 2;
+    });
+    if (chain) chain.push(t); else out.push([t]);
+  }
+  return out;
+};
+
 export const StoryPhoto: React.FC<{src: string; aspect: number; shots: StoryShot[]; tags?: StoryTag[]; durationFrames: number; revealShift?: number;
   move?: number; focusPull?: boolean}> = ({src, aspect, shots, tags = [], durationFrames, revealShift = 0, move = MOVE, focusPull = false}) => {
   const clock = useCurrentFrame();
@@ -117,15 +134,25 @@ export const StoryPhoto: React.FC<{src: string; aspect: number; shots: StoryShot
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Img src={staticFile(src)} style={{...v.style, filter: blur ? `blur(${blur / (v.W / (FRAME_W * 3))}px)` : undefined}} />
     {vignette ? <AbsoluteFill style={{background: `radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,${vignette}) 100%)`}} /> : null}
-    {tags.map((t, i) => {
+    {tagChains(tags).map((chain, i) => {
       // a tag never arrives while the camera is still travelling (it would slide across the screen with the picture):
       // it waits until the move that is under way when it is due has settled
-      const moving = shots.find((sh) => sh.at > 0 && sh.at <= t.at && t.at < sh.at + move);
-      const at = moving ? moving.at + move : t.at;
+      const settle = (due: number) => {
+        const moving = shots.find((sh) => sh.at > 0 && sh.at <= due && due < sh.at + move);
+        return moving ? moving.at + move : due;
+      };
+      const t = chain[0];
+      const at = settle(t.at);
       if (f < at) return null;
+      // several names for one thing at one point (DEMON, DEVIL, SPIRIT...): one tag and one arrow, the word replaced in
+      // the box on each name (the owner, 2026-10-24: the arrow was redrawn and the tag blinked for every name)
+      let k = 0;
+      chain.forEach((c, j) => { if (j > 0 && f >= c.at) k = j; });
+      const cur = chain[k];
       const [px, py] = v.toScreen(t.x, t.y);
       const [settledX, settledY] = photoView(aspect, camera(shots, at + 6, move)).toScreen(t.x, t.y);
-      return <PointerTag key={i} px={px} py={py} settledX={settledX} settledY={settledY} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined} text={t.text} t={f - at} opacity={tagOpacity(f, t.until ?? durationFrames + revealShift)} />;
+      return <PointerTag key={i} px={px} py={py} settledX={settledX} settledY={settledY} side={t.side} face={t.face ? {rx: (t.face[2] / 200) * v.W * 0.72, ry: (t.face[3] / 200) * v.H * 0.85} : undefined}
+        text={cur.text} t={f - at} textT={k > 0 ? f - cur.at : undefined} opacity={tagOpacity(f, chain[chain.length - 1].until ?? durationFrames + revealShift)} />;
     })}
   </AbsoluteFill>;
 };
