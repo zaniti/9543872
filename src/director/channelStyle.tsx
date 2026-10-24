@@ -90,12 +90,19 @@ export const easeInOut = (frame: number, from: number, to: number) =>
 export const textBase: React.CSSProperties = {fontFamily: FONT, textRendering: 'geometricPrecision', WebkitFontSmoothing: 'antialiased'};
 
 /** Graph-paper ground shared by the paper templates, with the same slow drift every paper template has. */
-export const PaperGround: React.FC<{frame: number; paper?: string}> = ({frame, paper}) => (
-  <AbsoluteFill style={{transform: `scale(${1.02 + Math.max(0, frame) * 0.00012})`}}>
+// Two paper-board templates back to back share one board (the owner, 2026-10-24): Job draws it once under both and
+// they leave their own paper out; the first clears its items at its end instead of a cut.
+export const SharedBoard = React.createContext(false);
+/** A template's own backdrop colour, transparent while it sits on the shared board. */
+export const useBoardBg = (colour: string) => (React.useContext(SharedBoard) ? 'transparent' : colour);
+
+export const PaperGround: React.FC<{frame: number; paper?: string; force?: boolean}> = ({frame, paper, force = false}) => {
+  if (React.useContext(SharedBoard) && !force) return null;
+  return <AbsoluteFill style={{transform: `scale(${1.02 + Math.max(0, frame) * 0.00012})`}}>
     <Img src={staticFile(paper ?? PAPER)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: paperFilter('brightness(1.09) saturate(.58)')}} />
     <div style={{position: 'absolute', inset: 0, background: paperVeil('rgba(247,243,223,.42)')}} />
-  </AbsoluteFill>
-);
+  </AbsoluteFill>;
+};
 
 // ------------------------------------------------------------------ the two text animations of the references
 // Measured frame by frame on the owner's reference videos (2026-10-23). Every template uses these two and nothing

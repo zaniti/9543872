@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, INK, PAPER, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, paperFilter, paperVeil, textBase, textWidth} from './channelStyle';
+import {CREAM, INK, PAPER, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, paperFilter, paperVeil, textBase, textWidth, useBoardBg} from './channelStyle';
 import {Badge, DrawnArrow, Reveal, TAG, TAG_BIG, TornPrint, TypeTag} from './RefKit';
 
 /**
@@ -9,10 +9,7 @@ import {Badge, DrawnArrow, Reveal, TAG, TAG_BIG, TornPrint, TypeTag} from './Ref
  * template: Poppins, the channel colour, one cream; text types in one character per frame; arrows draw themselves.
  */
 
-export const Paper: React.FC<{frame: number}> = ({frame}) => <AbsoluteFill style={{transform: `scale(${1.02 + Math.max(0, frame) * 0.00012})`}}>
-  <Img src={staticFile(PAPER)} style={{width: '100%', height: '100%', objectFit: 'cover', filter: paperFilter('brightness(1.09) saturate(.58)')}} />
-  <div style={{position: 'absolute', inset: 0, background: paperVeil('rgba(247,243,223,.42)')}} />
-</AbsoluteFill>;
+export const Paper: React.FC<{frame: number}> = ({frame}) => <PaperGround frame={frame} />;  // the one board
 
 const Photo: React.FC<{src: string; position?: string; frame: number; dim?: number}> = ({src, position = '50% 50%', frame, dim = 0}) => <>
   <Img src={staticFile(src)} style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: position,
@@ -66,7 +63,7 @@ export const ThenToday: React.FC<{background?: string; position?: string; card?:
   if (onPaper && card) {
     // measured on the references: the label large at the top left (119 px), the object under it, the arrow, the value right
     const cw = Math.min(620, 460 * card.aspect), ch = cw / card.aspect;
-    return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+    return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
       <Paper frame={clock} />
       {label ? <div style={{position: 'absolute', left: 170, top: 300, ...textBase, fontWeight: 800, fontSize: 119, lineHeight: 1.1, color: ink, whiteSpace: 'pre'}}><Reveal text={label} f={f} start={t0 - 6} /></div> : null}
       <div style={{position: 'absolute', left: 170, top: label ? 470 : 300, width: cw, height: ch}}><Print src={card.src} w={cw} h={ch} f={f} at={t0 - 10} fit="contain" /></div>
@@ -181,7 +178,7 @@ export const FigureOnPaper: React.FC<{card: {src: string; aspect: number}; headi
   const colL = 150 + w + 80, colW = 1920 - 80 - colL;
   const head = Math.min(80, Math.round(colW / Math.max(1, heading.length * 0.56)));
   const fig = Math.min(190, Math.round(colW / Math.max(1, figure.length * 0.66)));
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
     <div style={{position: 'absolute', left: 150, top: 540 - h / 2, width: w, height: h}}><Print src={card.src} w={w} h={h} f={f} at={at[0] ?? 0} fit="contain" /></div>
     <div style={{position: 'absolute', left: colL, width: colW, top: 540 - (head * 1.3 + fig * 1.1) / 2, textAlign: 'center'}}>
@@ -214,7 +211,7 @@ export const BetweenTwo: React.FC<{left: {src: string; aspect: number}; right: {
     </div>;
   };
   const mw = middle ? Math.min(420, 560 * middle.aspect) : 0, mh = middle ? mw / middle.aspect : 0;
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
     {side(left, middle ? 360 : 520, at[0] ?? 0, labels[0])}
     {side(right, middle ? 1560 : 1400, at[1] ?? 24, labels[1])}
@@ -240,7 +237,7 @@ export const BarsOnPaper: React.FC<{heading?: string; rows: BarRow[]; at?: numbe
   const tops = rows.map((r) => base - (base - top) * (r.value / max));
   const short = (v: number) => v >= 1e9 ? `${+(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `${+(v / 1e6).toFixed(1)}M` : v >= 1e4 ? `${+(v / 1e3).toFixed(1)}K` : formatNumber(+v.toFixed(2));
   const axisX = x0 - 150;
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
     {heading ? <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', ...textBase, fontWeight: 700, fontSize: 60, color: INK, letterSpacing: 1}}><Reveal text={heading} f={f} start={0} /></div> : null}
     <div style={{position: 'absolute', left: axisX, top: top - 30, width: 3, height: base - top + 30, background: INK, opacity: 0.75 * easeOut(f, 0, 10)}} />
@@ -322,7 +319,7 @@ export const DocumentQuote: React.FC<{doc: {src: string; aspect: number}; quote:
   // space beside it, the figure under it (68 px SemiBold)
   const w = Math.min(doc.aspect >= 1 ? 760 : 600, 760 * doc.aspect), h = w / doc.aspect;
   const colL = 150 + w + 80;
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
     <div style={{position: 'absolute', left: 150, top: 540 - h / 2, width: w, height: h}}><Print src={doc.src} w={w} h={h} f={f} at={at[0] ?? 0} fit="contain" /></div>
     <div style={{position: 'absolute', left: colL, right: 90, top: 360, textAlign: 'center'}}>
@@ -348,7 +345,7 @@ export const PrintsOnPaper: React.FC<{items: {src: string; aspect: number; posit
   const sh = Math.min(300, (900 - (small - 1) * 30) / small);
   const slots = portrait ? [[460, 540], ...Array.from({length: small}, (_, k) => [1425, 540 - ((small - 1) / 2 - k) * (sh + 30)])]
     : n <= 2 ? [[560, 540], [1360, 540]] : n === 3 ? [[390, 540], [960, 540], [1530, 540]] : [[560, 300], [1360, 300], [560, 780], [1360, 780]];
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
     {items.map((it, i) => {
       const H = portrait ? (i === 0 ? 900 : sh) : n <= 2 ? 800 : n === 3 ? 700 : 440;
@@ -371,7 +368,7 @@ export const PortraitPrint: React.FC<{src: string; aspect: number; position?: st
   const h = 700, w = Math.max(460, Math.min(600, h * aspect));
   const p = interpolate(f, [0, 12], [0, 1], {...clamp, easing: Easing.out(Easing.cubic)});
   const W = w + 2 * Math.round(w * 0.04), H = h + Math.round(w * 0.04) + Math.round(42 * 2.6);
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#d9d3c4'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
     <div style={{position: 'absolute', left: 960 - W / 2, top: 540 - H / 2, opacity: Math.min(1, p * 1.4), transform: `translateY(${(1 - p) * 140}px)`,
       filter: p < 1 ? `blur(${(1 - p) * 6}px)` : undefined}}>

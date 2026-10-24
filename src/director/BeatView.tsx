@@ -124,9 +124,9 @@ const BeatInner: React.FC<{beat: Beat}> = ({beat}) => {
 /** How long each entrance takes, in frames (the shot before stays underneath for that long). */
 export const ENTER_FRAMES: Record<string, number> = {whip: 9, blur: 12, frame: 22};
 
-export const BeatView: React.FC<{beat: Beat}> = ({beat}) => {
+export const BeatView: React.FC<{beat: Beat; noEnter?: boolean}> = ({beat, noEnter = false}) => {
   const frame = useCurrentFrame();
-  const enter = beat.data?.enter as 'whip' | 'blur' | 'frame' | undefined;
+  const enter = noEnter ? undefined : beat.data?.enter as 'whip' | 'blur' | 'frame' | undefined;  // on a shared board: no entrance
   const badge = beat.data?.badge as string | undefined;
   const inner = <BeatInner beat={beat} />;
   let body = inner;

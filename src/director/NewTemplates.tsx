@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, staticFile, useCurrentFrame} from 'remotion';
-import {CRIMSON, INK, PaperGround, RED, RevealText, TEXT_ON_PAPER, RiseWords, TagBox, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase} from './channelStyle';
+import {CRIMSON, INK, PaperGround, RED, RevealText, TEXT_ON_PAPER, RiseWords, TagBox, WipeBar, clamp, easeInOut, easeOut, formatNumber, textBase, useBoardBg} from './channelStyle';
 
 /** A real photo as a print on the paper: white border, slight tilt, drops in from below and settles. */
 const Print: React.FC<{src: string; x: number; y: number; w: number; h: number; frame: number; start: number; tilt?: number; position?: string; border?: number}> = ({src, x, y, w, h, frame, start, tilt = 0, position = '50% 35%', border = 14}) => {
@@ -26,7 +26,7 @@ export const TimelineStrip: React.FC<TimelineStripProps> = ({heading, events, re
   const line = easeInOut(frame, 8, 38);
   const xOf = (i: number) => left + (n === 1 ? (right - left) / 2 : ((right - left) * i) / (n - 1));
   const headIn = easeOut(frame, 0, 14);
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#e7e7d9'}}>
+  return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#e7e7d9')}}>
     <PaperGround frame={frame} />
     {/* the house heading on paper (as T41): 80 px SemiBold ink */}
     <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', color: INK, ...textBase, fontWeight: 600, fontSize: 80, lineHeight: 1.2,
