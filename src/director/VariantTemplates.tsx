@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, OffthreadVideo, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CREAM, INK, RED, RevealText, TEXT_RED, TagBox, TagLetters, clamp, easeInOut, easeOut, revealChar, textBase} from './channelStyle';
+import {CREAM, INK, KEY_TEXT, RED, RevealText, TEXT_RED, TagBox, TagLetters, clamp, easeInOut, easeOut, revealChar, textBase} from './channelStyle';
 
 /**
  * Second designs for the most used jobs (statement, number, sentence, place) and two new kinds (map, document).
@@ -23,7 +23,7 @@ export const Background: React.FC<{src: string; video?: string; position?: strin
 
 /** Text whose colour fills with the channel colour from left to right as p goes 0 -> 1 (soft edge). */
 export const sweep = (p: number, base: string): React.CSSProperties => ({
-  backgroundImage: `linear-gradient(90deg, ${TEXT_RED} ${p * 100}%, ${base} ${p * 100}%)`, // hard edge, like a marker
+  backgroundImage: `linear-gradient(90deg, ${KEY_TEXT} ${p * 100}%, ${base} ${p * 100}%)`, // hard edge, like a marker
   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent',
 });
 

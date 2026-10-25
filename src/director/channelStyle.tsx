@@ -12,6 +12,7 @@ export let RED = '#aa1533'; // bars only (title, name, year bars, comparison bar
 export let TEXT_RED = '#c8130b'; // red text: headings, numbers, emphasised words (brighter, reads on photos)
 export let CRIMSON = '#aa1533'; // year tags only
 export let TEXT_ON_PAPER = '#c8130b'; // the text colour where it sits on paper or a white print border (see readableOnPaper)
+export let KEY_TEXT = '#c8130b'; // highlighted words (*stars*) over a photo or film: the channel's "Highlighted words" colour
 export const DEFAULT_THEME = {bar: '#aa1533', text: '#c8130b'};
 export type Look = {aberration?: number; grain?: number; vignette?: number; texture?: number; edgeBlur?: number; post?: boolean};
 export type Theme = {bar?: string; text?: string; paper?: string; oneColour?: boolean; look?: Look};
@@ -58,7 +59,10 @@ export const applyTheme = (theme?: Theme | null) => {
   // one accent: the text colour follows the bar colour (no second shade), darkened only where it must read on paper
   TEXT_RED = theme?.text && HEX.test(theme.text) && theme.text.toLowerCase() !== bar.toLowerCase() && theme.oneColour === false ? text : bar;
   TEXT_ON_PAPER = readableOnPaper(TEXT_RED);
-  customText = [1, 3, 5].map((k) => parseInt(TEXT_RED.slice(k, k + 2), 16)) as [number, number, number];
+  // highlighted words sit on darkened photos, where a dark bar colour (navy) disappears: they take the channel's own
+  // "Highlighted words" colour (the owner, 2026-10-25)
+  KEY_TEXT = theme?.text && HEX.test(theme.text) ? text : TEXT_RED;
+  customText = [1, 3, 5].map((k) => parseInt(KEY_TEXT.slice(k, k + 2), 16)) as [number, number, number];
   // the channel's paper (a built-in under templates/papers/ or the job's own uploaded paper.jpg); none = squared paper
   const paper = theme?.paper && /^(templates\/papers\/[a-z]+\.jpg|jobs\/[^/]+\/paper\.jpg)$/.test(theme.paper) ? theme.paper : '';
   PAPER = paper || GRID_PAPER;

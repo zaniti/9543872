@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, INK, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, textBase, textWidth, useBoardBg} from './channelStyle';
+import {CREAM, INK, KEY_TEXT, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, textBase, textWidth, useBoardBg} from './channelStyle';
 import {Badge, DrawnArrow, Reveal, TAG, TAG_BIG, TornPrint, TypeTag} from './RefKit';
 
 /**
@@ -295,7 +295,7 @@ export const SentenceRef: React.FC<{background: string; position?: string; sente
   sentence.split(/(\*[^*]+\*)/).filter(Boolean).forEach((seg) => {
     const len = seg.replace(/\*/g, '').length;
     // each key phrase turns red on the narrator's word when the build knows it (data.keyAt), never before the line is in
-    if (seg.startsWith('*')) { marks.push({from: pos, to: pos + len, at: Math.max(done + 4 + 12 * nth, keyAt[nth] ?? -Infinity), color: RED}); nth++; }
+    if (seg.startsWith('*')) { marks.push({from: pos, to: pos + len, at: Math.max(done + 4 + 12 * nth, keyAt[nth] ?? -Infinity), color: KEY_TEXT}); nth++; }
     pos += len;
   });
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>

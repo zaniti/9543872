@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom, type TemplateTiming} from './templateMotion';
-import {CREAM, FONT, TEXT_RED, RiseWords, clamp, easeOut, formatNumber} from './channelStyle';
+import {CREAM, FONT, KEY_TEXT, TEXT_RED, RiseWords, clamp, easeOut, formatNumber} from './channelStyle';
 
 /** Template 14: one number and its meaning.
  * Default "highlight": everything appears in white (soft fade), then the number and the important words turn the channel
@@ -9,7 +9,7 @@ import {CREAM, FONT, TEXT_RED, RiseWords, clamp, easeOut, formatNumber} from './
  * "calm": number red + line white, fade only. "count": the original count-up with the word-by-word line. */
 const sweep = (p: number): React.CSSProperties => ({
   // white text whose colour fills with red from left to right as p goes 0 -> 1
-  backgroundImage: `linear-gradient(90deg, ${TEXT_RED} ${p * 100}%, ${CREAM} ${p * 100}%)`, // hard edge, like a marker
+  backgroundImage: `linear-gradient(90deg, ${KEY_TEXT} ${p * 100}%, ${CREAM} ${p * 100}%)`, // hard edge, like a marker
   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent',
 });
 const HighlightCopy: React.FC<{copy: string; f: number; start: number}> = ({copy, f, start}) => {
