@@ -41,7 +41,9 @@ const NO_AI: Record<string, string> = {
   en: 'NO AI GENERATED CONTENT USED', es: 'SIN CONTENIDO GENERADO POR IA', fr: 'AUCUN CONTENU GÉNÉRÉ PAR IA',
   de: 'KEINE KI-GENERIERTEN INHALTE', pt: 'SEM CONTEÚDO GERADO POR IA', it: 'NESSUN CONTENUTO GENERATO DA IA',
 };
-const NO_AI_FRAMES = 20 * 30;
+// on screen 3 s each time, like the references' source tag (measured: in 1 s, held 0.9 s, out 1.1 s)
+const NO_AI_FRAMES = 90;
+const NO_AI_EVERY = 10 * 60 * 30;  // then again every 10 minutes
 export type NoAiLook = 'pill' | 'check' | 'source';
 const NO_AI_LEFT = 48, NO_AI_BOTTOM = 44;
 /** Small, bottom left, from the end of the first shot for 20 s (the owner, 2026-10-25), drawn with the house
@@ -139,6 +141,27 @@ const BoardClear: React.FC<{frames: number; clear: boolean; children: React.Reac
   return <AbsoluteFill style={{transform: p ? `translate(${-p * 700}px, ${-p * 40}px)` : undefined, opacity: 1 - p}}>{children}</AbsoluteFill>;
 };
 
+/** When the label shows: after the first shot, then every 10 minutes; each time moved later to the first moment
+ *  when no year tag (or other top-right text) is on screen for its 3 s, so it never meets one. */
+const TOP_RIGHT_MODES = new Set(['T1', 'T1j', 'T3', 'T5']);
+const hasTopRight = (b: Beat) => TOP_RIGHT_MODES.has(b.mode) || Boolean((b.text as Record<string, unknown> | undefined)?.year)
+  || Boolean((b.text as Record<string, unknown> | undefined)?.yearEnd);
+const noAiTimes = (beats: Beat[]): number[] => {
+  if (!beats.length) return [];
+  const end = beats[beats.length - 1].startFrame + beats[beats.length - 1].durationFrames;
+  const busy = beats.filter(hasTopRight).map((b) => [b.startFrame, b.startFrame + b.durationFrames] as [number, number]);
+  const free = (t: number) => !busy.some(([a, z]) => t < z && t + NO_AI_FRAMES > a);
+  const out: number[] = [];
+  for (let want = beats.length > 1 ? beats[1].startFrame : 0; want + NO_AI_FRAMES <= end; want += NO_AI_EVERY) {
+    let t = want;
+    // the next beat start (or the end of a busy beat) after `want` where the 3 s are clear, within the next 2 minutes
+    const starts = beats.map((b) => b.startFrame).concat(busy.map(([, z]) => z)).filter((x) => x >= want).sort((a, b) => a - b);
+    t = [want, ...starts].find((x) => x - want < 2 * 60 * 30 && x + NO_AI_FRAMES <= end && free(x)) ?? -1;
+    if (t >= 0 && (!out.length || t - out[out.length - 1] > NO_AI_FRAMES)) out.push(t);
+  }
+  return out;
+};
+
 export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles, theme, language, premount = 0, noAiLook = 'source', noAiSize = 19, noAiSplit, noAiMark = 'check'}) => {
   // the channel font (Poppins) is loaded before the first frame is taken
   const [fontWait] = React.useState(() => delayRender('channel font'));
@@ -149,7 +172,6 @@ export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles,
   }, [fontWait]);
   applyTheme(theme);
   setLanguage(language);  // the channel's accent colours, before any template renders
-  const noAiFrom = beats.length > 1 ? beats[1].startFrame : 0;  // after the first shot
   return <AbsoluteFill style={{background: '#0d0d0d'}}>
   {audio ? <Audio src={staticFile(audio)} /> : null}
   <Premount.Provider value={premount}>
@@ -179,7 +201,7 @@ export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles,
     </Sequence>)];
     // the channel's finishing look over every scene (text included); none when the channel has not set one
     // the label carries the film look too (RGB split, texture, grain), above the soft corners that would blur it
-    const label = <NoAiLabel key="no-ai" language={language} from={noAiFrom} look={noAiLook} size={noAiSize} mark={noAiMark} />;
+    const label = <>{noAiTimes(beats).map((t) => <NoAiLabel key={`no-ai-${t}`} language={language} from={t} look={noAiLook} size={noAiSize} mark={noAiMark} />)}</>;
     return theme?.look ? <LookFilter look={theme.look} overlay={label} overlaySplit={noAiSplit ?? (noAiLook === 'source' ? 0 : undefined)}>{scenes}</LookFilter> : <>{scenes}{label}</>;
   })()}
   </Premount.Provider>
