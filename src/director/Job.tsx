@@ -41,8 +41,9 @@ const NO_AI: Record<string, string> = {
   en: 'NO AI GENERATED CONTENT USED', es: 'SIN CONTENIDO GENERADO POR IA', fr: 'AUCUN CONTENU GÉNÉRÉ PAR IA',
   de: 'KEINE KI-GENERIERTEN INHALTE', pt: 'SEM CONTEÚDO GERADO POR IA', it: 'NESSUN CONTENUTO GENERATO DA IA',
 };
-// on screen 3 s each time, like the references' source tag (measured: in 1 s, held 0.9 s, out 1.1 s)
-const NO_AI_FRAMES = 90;
+// about 4.8 s on screen, 4 s of it fully readable (the owner, 2026-10-25: longer than the references' 3 s source tag,
+// so the longer line is read); the entrance and exit are the reference's
+const NO_AI_FRAMES = 144;
 const NO_AI_EVERY = 10 * 60 * 30;  // then again every 10 minutes
 export type NoAiLook = 'pill' | 'check' | 'source';
 const NO_AI_LEFT = 48, NO_AI_BOTTOM = 44;
