@@ -30,7 +30,8 @@ const Print: React.FC<{src: string; w: number; h: number; f: number; at: number;
 /** A number that counts up from 0 to `to` between frames a and b; the text around it ("$", " MILLION") stays put. */
 const count = (to: number, f: number, a: number, b: number) => to * interpolate(f, [a, b], [0, 1], {...clamp, easing: Easing.out(Easing.cubic)});
 const splitFigure = (s: string): [string, number | null, string] => {
-  const m = s.match(/^([^0-9]*)([0-9][0-9,.]*)(.*)$/);
+  // a number ends on a digit: a comma or full stop after it stays in the text ("MARCH 1, 1692", "1908.")
+  const m = s.match(/^([^0-9]*)([0-9](?:[0-9,.]*[0-9])?)(.*)$/);
   if (!m) return [s, null, ''];
   return [m[1], parseFloat(m[2].replace(/,/g, '')), m[3]];
 };
