@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Freeze, Img, interpolate, OffthreadVideo, staticFile, useCurrentFrame} from 'remotion';
-import {CREAM, INK, PAPER, RED, TagBox, clamp, easeOut, paperFilter, paperVeil, textBase, useTopLeftInset} from './channelStyle';
+import {CREAM, INK, PAPER, RED, TagBox, clamp, easeOut, paperFilter, paperVeil, textBase} from './channelStyle';
 import {FRAME_H, FRAME_W, PointerTag, RedTag, camera, photoView, tagOpacity, type StoryShot} from './StoryPhoto';
 import {Reveal} from './RefKit';
 
@@ -198,7 +198,6 @@ export type PathPoint = {x: number; y: number; at: number; label?: string};
 
 export const PathTrace: React.FC<{src: string; aspect: number; points: PathPoint[]; follow?: number; title?: string; subtitle?: string; durationFrames: number; revealShift?: number}> = ({src, aspect, points, follow = 45, title, subtitle, durationFrames, revealShift = 0}) => {
   const clock = useCurrentFrame();
-  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const f = clock - revealShift;
   const pts = [...points].sort((a, b) => a.at - b.at);
   if (pts.length < 2) return null;
@@ -266,7 +265,7 @@ export const PathTrace: React.FC<{src: string; aspect: number; points: PathPoint
       </> : null}
     </svg>
     {/* measured on the references: the title 66 px glyphs at the top centre, the subtitle under it between two thin rules */}
-    {title ? <div style={{position: 'absolute', top: 26 + inset, left: 0, right: 0, textAlign: 'center', ...textBase, color: '#1d1b17', textShadow: '0 0 14px rgba(255,255,255,.65)'}}>
+    {title ? <div style={{position: 'absolute', top: 26, left: 0, right: 0, textAlign: 'center', ...textBase, color: '#1d1b17', textShadow: '0 0 14px rgba(255,255,255,.65)'}}>
       <div style={{fontWeight: 700, fontSize: 74, lineHeight: 1.15, whiteSpace: 'pre'}}><span style={{position: 'relative'}}><span style={{visibility: 'hidden'}}>{title}</span>
         <span style={{position: 'absolute', left: 0, top: 0}}><Reveal text={title} f={f} start={0} rate={1} /></span></span></div>
       {subtitle ? <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26, marginTop: 6, opacity: easeOut(f, title.length, title.length + 10)}}>

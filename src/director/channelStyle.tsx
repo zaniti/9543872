@@ -93,13 +93,6 @@ export const textBase: React.CSSProperties = {fontFamily: FONT, textRendering: '
 // Two paper-board templates back to back share one board (the owner, 2026-10-24): Job draws it once under both and
 // they leave their own paper out; the first clears its items at its end instead of a cut.
 export const SharedBoard = React.createContext(false);
-
-// The "No AI generated content" label sits top left for the first 20 s of every video (Job). A shot that starts in
-// those 20 s gets this inset: whatever it would draw in the top-left corner moves down below the label (for the whole
-// shot, so nothing jumps when the label goes).
-export const NO_AI_BOX = {right: 680, bottom: 128};
-export const TopLeftInset = React.createContext(0);
-export const useTopLeftInset = () => React.useContext(TopLeftInset);
 /** A template's own backdrop colour, transparent while it sits on the shared board. */
 export const useBoardBg = (colour: string) => (React.useContext(SharedBoard) ? 'transparent' : colour);
 

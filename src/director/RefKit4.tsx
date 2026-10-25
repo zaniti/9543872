@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Audio, Easing, Img, Sequence, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {Background} from './VariantTemplates';
-import {CREAM, INK, RED, RevealText, TagBox, TagLetters, clamp, easeInOut, easeOut, tagDone, textBase, useTopLeftInset} from './channelStyle';
+import {CREAM, INK, RED, RevealText, TagBox, TagLetters, clamp, easeInOut, easeOut, tagDone, textBase} from './channelStyle';
 import {DrawnArrow, TAG, TAG_BIG, TornPrint} from './RefKit';
 import {Paper as PaperBg} from './RefKit2';
 
@@ -38,7 +38,6 @@ export const PlaceYearRef: React.FC<Bg & {place: string; year?: string}> = ({bac
 /** The coordinates tick in (small cream line), the place tag types under them; the year at the top right. */
 export const CoordinatesRef: React.FC<Bg & {place: string; year?: string; coords?: string}> = ({background, backgroundVideo, backgroundPosition, place, year = '', coords = '', revealShift = 0}) => {
   const clock = useCurrentFrame();
-  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const f = clock - revealShift;
   const p = interpolate(f, [4, 26], [0, 1], clamp);
   // the digits roll toward their value while the line arrives
@@ -47,7 +46,7 @@ export const CoordinatesRef: React.FC<Bg & {place: string; year?: string; coords
   return <AbsoluteFill style={{overflow: 'hidden', background: '#111'}}>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
     <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 18% 22%, rgba(0,0,0,.45) 0%, rgba(0,0,0,.15) 40%, rgba(0,0,0,0) 65%)'}} />
-    <div style={{position: 'absolute', left: 170, top: 100 + inset}}>
+    <div style={{position: 'absolute', left: 170, top: 100}}>
       {coords ? <div style={{...textBase, color: CREAM, fontWeight: 500, fontSize: 36, letterSpacing: 4, fontVariantNumeric: 'tabular-nums', marginBottom: 18,
         textShadow: '0 2px 10px rgba(0,0,0,.6)', whiteSpace: 'pre'}}><RevealText text={ticking} frame={f} start={2} /></div> : null}
       <TagBox text={place} frame={f} start={placeAt} size={TAG_BIG} />
@@ -63,7 +62,6 @@ export const CoordinatesRef: React.FC<Bg & {place: string; year?: string; coords
  *  a letter rising in every 1.7 frames) with a blinking caret in the channel colour. */
 export const DatelineRef: React.FC<Bg & {place: string; year?: string; date?: string}> = ({background, backgroundVideo, backgroundPosition, place, year = '', date = '', revealShift = 0}) => {
   const clock = useCurrentFrame();
-  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const f = clock - revealShift;
   const line = `${place.toUpperCase()} — ${(date || year).toUpperCase()}`;
   const open = easeInOut(f, 0, 8);
@@ -75,7 +73,7 @@ export const DatelineRef: React.FC<Bg & {place: string; year?: string; date?: st
       <Audio src={staticFile('sfx/type_soft.wav')} volume={0.22} />
     </Sequence>
     <Background src={background} video={backgroundVideo} position={backgroundPosition} frame={clock} />
-    <div style={{position: 'absolute', left: 0, right: 0, top: 100 + inset, height: 116, background: 'rgba(10,10,10,.78)', clipPath: `inset(0 ${(1 - open) * 100}% 0 0)`}}>
+    <div style={{position: 'absolute', left: 0, right: 0, top: 100, height: 116, background: 'rgba(10,10,10,.78)', clipPath: `inset(0 ${(1 - open) * 100}% 0 0)`}}>
       <div style={{position: 'absolute', left: 0, top: 0, bottom: 0, width: 14, background: RED}} />
       <div style={{position: 'absolute', left: 170, top: 0, bottom: 0, display: 'flex', alignItems: 'center', overflow: 'hidden', ...textBase, color: CREAM,
         fontWeight: 600, fontSize: 50, letterSpacing: 4, whiteSpace: 'pre'}}>

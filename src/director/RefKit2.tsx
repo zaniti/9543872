@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {backgroundZoom} from './templateMotion';
-import {CREAM, INK, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, textBase, textWidth, useBoardBg, useTopLeftInset} from './channelStyle';
+import {CREAM, INK, PaperGround, RED, TEXT_ON_PAPER, clamp, easeInOut, easeOut, formatNumber, textBase, textWidth, useBoardBg} from './channelStyle';
 import {Badge, DrawnArrow, Reveal, TAG, TAG_BIG, TornPrint, TypeTag} from './RefKit';
 
 /**
@@ -227,7 +227,6 @@ export type BarRow = {label: string; value: number; display?: string};
  *  drawn arrow joins their tops (the rise or the fall). The first bar is in the channel colour, the others dark. */
 export const BarsOnPaper: React.FC<{heading?: string; rows: BarRow[]; at?: number[]; revealShift?: number}> = ({heading, rows, at = [], revealShift = 0}) => {
   const clock = useCurrentFrame();
-  const inset = useTopLeftInset();  // below the No AI label in the first 20 s
   const f = clock - revealShift;
   // measured on the references: bars 204 px wide on a scale from 150 to 1020 px high, a value axis at the left
   const raw = Math.max(1, ...rows.map((r) => r.value));
@@ -240,7 +239,7 @@ export const BarsOnPaper: React.FC<{heading?: string; rows: BarRow[]; at?: numbe
   const axisX = x0 - 150;
   return <AbsoluteFill style={{overflow: 'hidden', background: useBoardBg('#d9d3c4')}}>
     <Paper frame={clock} />
-    {heading ? <div style={{position: 'absolute', top: 70 + inset, left: 0, right: 0, textAlign: 'center', ...textBase, fontWeight: 700, fontSize: 60, color: INK, letterSpacing: 1}}><Reveal text={heading} f={f} start={0} /></div> : null}
+    {heading ? <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', ...textBase, fontWeight: 700, fontSize: 60, color: INK, letterSpacing: 1}}><Reveal text={heading} f={f} start={0} /></div> : null}
     <div style={{position: 'absolute', left: axisX, top: top - 30, width: 3, height: base - top + 30, background: INK, opacity: 0.75 * easeOut(f, 0, 10)}} />
     {[0, 1, 2, 3, 4, 5].map((k) => <React.Fragment key={k}>
       <div style={{position: 'absolute', left: axisX - 14, top: base - (base - top) * (k / 5) - 1, width: 14, height: 3, background: INK, opacity: 0.75 * easeOut(f, 0, 10)}} />

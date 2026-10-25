@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Audio, CalculateMetadataFunction, Easing, Sequence, continueRender, delayRender, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {BeatView, ENTER_FRAMES, Premount, type Beat} from './BeatView';
 import {ReviewSubtitles, type SubtitleCue} from './ReviewSubtitles';
-import {FONT_FILES, PaperGround, SharedBoard, applyTheme, setLanguage, type Theme, TopLeftInset, NO_AI_BOX} from './channelStyle';
+import {FONT_FILES, PaperGround, SharedBoard, applyTheme, setLanguage, type Theme, CREAM, RevealText, textBase, TagBox, textWidth} from './channelStyle';
 import {LookFilter} from './Look';
 
 /** One director job: written by engine/build_project.py to jobs/<id>/edit.json and passed in as props. */
@@ -16,6 +16,13 @@ export type JobProps = {
   theme?: Theme | null;
   /** The narration's language (en, es, ...): numbers on screen use its thousands mark. */
   language?: string;
+  /** The look of the "No AI generated content" label. */
+  noAiLook?: NoAiLook;
+  /** Label text size and its own colour-split strength (preview of the options; defaults: 19 and the video's). */
+  noAiSize?: number;
+  noAiSplit?: number;
+  /** The source-style label's mark: a bracketed tick, or a circled i. */
+  noAiMark?: 'check' | 'info';
   /** Review player only (6 s): build each scene this many frames early (hidden) so its photo or film has loaded when it
    *  appears, instead of a black frame. Renders leave it at 0: they wait for every frame anyway. */
   premount?: number;
@@ -35,14 +42,91 @@ const NO_AI: Record<string, string> = {
   de: 'KEINE KI-GENERIERTEN INHALTE', pt: 'SEM CONTEÚDO GERADO POR IA', it: 'NESSUN CONTENUTO GENERATO DA IA',
 };
 const NO_AI_FRAMES = 20 * 30;
-const NoAiLabel: React.FC<{language?: string}> = ({language}) => {
-  const f = useCurrentFrame();
-  const o = interpolate(f, [12, 24, NO_AI_FRAMES - 18, NO_AI_FRAMES], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  if (o <= 0) return null;
-  const text = NO_AI[(language || 'en').slice(0, 2).toLowerCase()] ?? NO_AI.en;
-  return <div style={{position: 'absolute', left: 54, top: 46, opacity: o, transform: `translateY(${(1 - o) * -8}px)`, padding: '13px 24px',
-    background: 'rgba(255,255,255,.94)', borderRadius: 16, boxShadow: '0 4px 18px rgba(0,0,0,.25)', color: '#2b2b2b',
-    fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 700, fontSize: 31, letterSpacing: 0.4, whiteSpace: 'pre'}}>{text}</div>;
+export type NoAiLook = 'pill' | 'check' | 'source';
+const NO_AI_LEFT = 48, NO_AI_BOTTOM = 44;
+/** Small, bottom left, from the end of the first shot for 20 s (the owner, 2026-10-25), drawn with the house
+ *  animations and under the film look (RGB split, grain) like everything else. Two looks:
+ *  'pill': a small white box stepping wider as each letter rises in (the tag animation);
+ *  'check': a circle draws, a tick snaps in, the words reveal beside it (the text animation). */
+const NoAiLabel: React.FC<{language?: string; from: number; look?: NoAiLook; size?: number; mark?: 'check' | 'info'}> = ({language, from, look = 'pill', size = 19, mark: mark_ = 'check'}) => {
+  const f = useCurrentFrame() - from;
+  if (f < 0 || f > NO_AI_FRAMES) return null;
+  const caps = NO_AI[(language || 'en').slice(0, 2).toLowerCase()] ?? NO_AI.en;
+  // the references write their tag in title case ("Source in Description")
+  const text = look === 'source' ? caps.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m) => m.toUpperCase()).replace(/\bAi\b|\bIa\b|\bKi\b/g, (m) => m.toUpperCase()) : caps;
+  const out = interpolate(f, [NO_AI_FRAMES - 14, NO_AI_FRAMES], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const pos: React.CSSProperties = {position: 'absolute', left: NO_AI_LEFT, bottom: NO_AI_BOTTOM, opacity: 1 - out};
+  if (look === 'source') {
+    // copied frame by frame from the reference (Medici video 9:47, 30 fps), measured at 1080p. Nothing slides as a
+    // whole: the brackets stay where they are, the line is anchored on its left. Entrance (frame numbers from the first):
+    //  0-5   the two brackets grow from flat dashes to full height, far apart;
+    //  9-    the letters come in one after another (about 2.4 a frame), each fading in over 3 frames with wide spacing
+    //        that closes up over ~14 frames, so the line tightens toward the brackets;
+    //  11-15 the mark inside grows from a thin line to full width.
+    // The exit is the entrance played backwards (the mark goes, the brackets fold flat, the line opens up and fades
+    // from its end).
+    const T = NO_AI_FRAMES;
+    const e = Math.min(f, T - f);                                   // the exit mirrors the entrance
+    const cl = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+    const SIZE = 40, BR = 44, GAP = 14, INNER = 40;                 // Poppins Bold 40 (the reference is heavier than SemiBold), brackets SemiBold 44
+    const width = textWidth('[', BR, 600) * 2 + INNER + GAP + textWidth(text, SIZE, 700);
+    const widthInfo = 44 + GAP + textWidth(text, SIZE, 700);
+    const bracket = interpolate(e, [0, 5], [0.08, 1], {...cl, easing: Easing.out(Easing.cubic)});
+    const mark = interpolate(e, [11, 15], [0.05, 1], cl);
+    const shadow = '0 2px 4px rgba(0,0,0,.55), 0 0 12px rgba(0,0,0,.35)';
+    if (e < 0) return null;
+    const letters = <span style={{fontWeight: 700, fontSize: SIZE}}>{[...text].map((c, k) => {
+        const s0 = 9 + k * 0.42;                                   // ~2.4 letters a frame, as measured
+        const op = interpolate(e, [s0, s0 + 3], [0, 1], cl);
+        const tight = interpolate(e, [s0, s0 + 14], [0, 1], {...cl, easing: Easing.out(Easing.cubic)});
+        return <span key={k} style={{display: 'inline-block', whiteSpace: 'pre', opacity: op, marginRight: (1 - tight) * 18}}>{c}</span>;
+      })}</span>;
+    if (mark_ === 'info') {
+      // the circled "i" instead of the bracketed mark: the circle draws round in the brackets' frames (0-5), the "i"
+      // grows in where the mark did (11-15); the exit mirrors it
+      const ring = interpolate(e, [0, 6], [0, 1], {...cl, easing: Easing.out(Easing.cubic)});
+      return <div style={{position: 'absolute', left: 1920 - 168 - widthInfo, top: 54, height: 50, display: 'flex', alignItems: 'center',
+        ...textBase, lineHeight: 1, color: '#ffffff', textShadow: shadow, whiteSpace: 'pre'}}>
+        <svg width={44} height={44} viewBox="0 0 44 44" style={{filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.55))', overflow: 'visible'}}>
+          <circle cx={22} cy={22} r={19} fill="none" stroke="#ffffff" strokeWidth={3.6} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - ring}
+            transform="rotate(-90 22 22)" />
+          {e >= 11 ? <g transform={`translate(22 22) scale(${mark}) translate(-22 -22)`}>
+            <circle cx={23.6} cy={12.6} r={3.1} fill="#ffffff" />
+            <path d="M17.6 19.6 L25.4 18.6 L22.2 30.2 Q21.6 32.6 23.4 31.6 L25.6 30.0" fill="none" stroke="#ffffff" strokeWidth={3.6}
+              strokeLinecap="round" strokeLinejoin="round" />
+          </g> : null}
+        </svg>
+        <span style={{display: 'inline-block', width: GAP}} />
+        {letters}
+      </div>;
+    }
+    return <div style={{position: 'absolute', left: 1920 - 168 - width, top: 54, height: 50, display: 'flex', alignItems: 'center',
+      ...textBase, lineHeight: 1, color: '#ffffff', textShadow: shadow, whiteSpace: 'pre'}}>
+      <span style={{display: 'inline-block', fontWeight: 600, fontSize: BR, transform: `scaleY(${bracket})`}}>[</span>
+      <span style={{display: 'inline-flex', width: INNER, justifyContent: 'center', alignItems: 'center'}}>
+        {e >= 11 ? <svg width={34} height={34} viewBox="0 0 30 30" style={{transform: `scaleX(${mark})`, filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.55))'}}>
+          <path d="M5 16 l7 7 l13 -16" fill="none" stroke="#ffffff" strokeWidth={4.6} strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
+      </span>
+      <span style={{display: 'inline-block', fontWeight: 600, fontSize: BR, transform: `scaleY(${bracket})`}}>]</span>
+      <span style={{display: 'inline-block', width: GAP}} />
+      {letters}
+    </div>;
+  }
+  if (look === 'check') {
+    const ring = interpolate(f, [0, 10], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)});
+    const tick = interpolate(f, [8, 14], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+    return <div style={{...pos, display: 'flex', alignItems: 'center', gap: 10, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,.85)) drop-shadow(0 0 8px rgba(0,0,0,.45))'}}>
+      <svg width={30} height={30} viewBox="0 0 30 30">
+        <circle cx={15} cy={15} r={12.5} fill="rgba(255,250,242,.12)" stroke={CREAM} strokeWidth={2.4} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - ring} transform="rotate(-90 15 15)" />
+        <path d="M9 15.5 l4 4 l8 -9" fill="none" stroke={CREAM} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - tick} />
+      </svg>
+      <div style={{...textBase, fontWeight: 600, fontSize: 19, letterSpacing: 1.8, color: CREAM, whiteSpace: 'pre'}}><RevealText text={text} frame={f} start={12} /></div>
+    </div>;
+  }
+  return <div style={pos}>
+    <TagBox text={text} frame={f} start={0} size={size} color="rgba(255,255,255,.9)" textColor="#2b2b2b" weight={700} rtl={false} anchor="left"
+      style={{fontFamily: 'Arial, Helvetica, sans-serif', letterSpacing: 0.6, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,.2)'}} />
+  </div>;
 };
 
 /** The shared board: the same paper the templates draw, with one slow zoom across the whole run. */
@@ -55,7 +139,7 @@ const BoardClear: React.FC<{frames: number; clear: boolean; children: React.Reac
   return <AbsoluteFill style={{transform: p ? `translate(${-p * 700}px, ${-p * 40}px)` : undefined, opacity: 1 - p}}>{children}</AbsoluteFill>;
 };
 
-export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles, theme, language, premount = 0}) => {
+export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles, theme, language, premount = 0, noAiLook = 'source', noAiSize = 19, noAiSplit, noAiMark = 'check'}) => {
   // the channel font (Poppins) is loaded before the first frame is taken
   const [fontWait] = React.useState(() => delayRender('channel font'));
   React.useEffect(() => {
@@ -65,6 +149,7 @@ export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles,
   }, [fontWait]);
   applyTheme(theme);
   setLanguage(language);  // the channel's accent colours, before any template renders
+  const noAiFrom = beats.length > 1 ? beats[1].startFrame : 0;  // after the first shot
   return <AbsoluteFill style={{background: '#0d0d0d'}}>
   {audio ? <Audio src={staticFile(audio)} /> : null}
   <Premount.Provider value={premount}>
@@ -88,17 +173,16 @@ export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles,
     const scenes = [...boards, ...beats.map((beat, i) => <Sequence key={beat.id} from={beat.startFrame}
       durationInFrames={beat.durationFrames + (linked(i) ? 0 : ENTER_FRAMES[(beats[i + 1]?.data?.enter as string) ?? ''] ?? 0)} name={`${beat.id} ${beat.mode}`}
       premountFor={premount}>
-      <TopLeftInset.Provider value={beat.startFrame < NO_AI_FRAMES ? NO_AI_BOX.bottom - 40 : 0}>
       {linked(i) ? <SharedBoard.Provider value={true}>
         <BoardClear frames={beat.durationFrames} clear={!!onBoard[i + 1]}><BeatView beat={beat} noEnter /></BoardClear>
       </SharedBoard.Provider> : <BeatView beat={beat} />}
-      </TopLeftInset.Provider>
     </Sequence>)];
     // the channel's finishing look over every scene (text included); none when the channel has not set one
-    return theme?.look ? <LookFilter look={theme.look}>{scenes}</LookFilter> : scenes;
+    // the label carries the film look too (RGB split, texture, grain), above the soft corners that would blur it
+    const label = <NoAiLabel key="no-ai" language={language} from={noAiFrom} look={noAiLook} size={noAiSize} mark={noAiMark} />;
+    return theme?.look ? <LookFilter look={theme.look} overlay={label} overlaySplit={noAiSplit ?? (noAiLook === 'source' ? 0 : undefined)}>{scenes}</LookFilter> : <>{scenes}{label}</>;
   })()}
   </Premount.Provider>
-  <NoAiLabel language={language} />
   {showSubtitles && subtitles ? <ReviewSubtitles cues={subtitles} /> : null}
 </AbsoluteFill>;
 };

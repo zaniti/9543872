@@ -12,7 +12,7 @@ import type {Look as LookSettings} from './channelStyle';
  * Each strength is a channel setting (theme.look); 0 turns that part off. It costs render time (the cloud renderer's
  * parallel chunks absorb it).
  */
-export const LookFilter: React.FC<{look: LookSettings; children: React.ReactNode}> = ({look, children}) => {
+export const LookFilter: React.FC<{look: LookSettings; children: React.ReactNode; overlay?: React.ReactNode; overlaySplit?: number}> = ({look, children, overlay, overlaySplit}) => {
   const frame = useCurrentFrame();
   const ab = Math.max(0, Math.min(8, look.aberration ?? 0));
   const grain = Math.max(0, Math.min(1, look.grain ?? 0));
@@ -33,6 +33,17 @@ export const LookFilter: React.FC<{look: LookSettings; children: React.ReactNode
         <feBlend in="rs" in2="g" mode="screen" result="rg" />
         <feBlend in="rg" in2="bs" mode="screen" />
       </filter>
+        <filter id="look-ca-label" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+        <feOffset in="r" dx={overlaySplit ?? ab} dy="0" result="ro" />
+        <feGaussianBlur in="ro" stdDeviation="0.7" result="rs" />
+        <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+        <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+        <feOffset in="b" dx={-(overlaySplit ?? ab)} dy="0" result="bo" />
+        <feGaussianBlur in="bo" stdDeviation="0.7" result="bs" />
+        <feBlend in="rs" in2="g" mode="screen" result="rg" />
+        <feBlend in="rg" in2="bs" mode="screen" />
+      </filter>
       <filter id="look-grain" x="0" y="0" width="100%" height="100%">
         <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed={seed} stitchTiles="stitch" />
         <feColorMatrix type="saturate" values="0" />
@@ -45,6 +56,9 @@ export const LookFilter: React.FC<{look: LookSettings; children: React.ReactNode
     {/* the corners soften like an old lens (the centre stays sharp) */}
     {edgeBlur > 0 ? <AbsoluteFill style={{backdropFilter: `blur(${3 * edgeBlur}px)`, WebkitBackdropFilter: `blur(${3 * edgeBlur}px)`,
       maskImage: 'radial-gradient(ellipse at center, transparent 58%, black 100%)', WebkitMaskImage: 'radial-gradient(ellipse at center, transparent 58%, black 100%)'}} /> : null}
+    {/* overlay (the No AI label): above the soft corners so it stays sharp, but with the same RGB split, and the texture,
+        grain and vignette over it like everything else */}
+    {overlay ? <AbsoluteFill style={{filter: (overlaySplit ?? ab) > 0 ? `url(#${overlaySplit === undefined ? 'look-ca' : 'look-ca-label'})` : undefined}}>{overlay}</AbsoluteFill> : null}
     {/* a fine printed-canvas texture over everything, text included */}
     {texture > 0 ? <AbsoluteFill style={{backgroundImage: 'radial-gradient(rgba(255,255,255,.9) 0.8px, transparent 1.3px), radial-gradient(rgba(0,0,0,.9) 0.8px, transparent 1.3px)',
       backgroundSize: '4px 4px, 4px 4px', backgroundPosition: '0 0, 2px 2px', mixBlendMode: 'soft-light', opacity: 0.18 * texture}} /> : null}
