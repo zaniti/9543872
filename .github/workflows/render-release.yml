@@ -45,7 +45,15 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           mkdir -p release-zips
-          gh release download "$RELEASE_TAG" --pattern "*.zip" --dir release-zips
+          names="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
+          # a package over 1.9 GB comes in parts (<name>.zip.001, .002...): only its name is needed here, so a placeholder
+          # stands for it; every chunk job downloads and joins the parts itself
+          if printf '%s\n' "$names" | grep '\.zip$' > /dev/null; then
+            gh release download "$RELEASE_TAG" --pattern "*.zip" --dir release-zips
+          fi
+          for first in $(printf '%s\n' "$names" | grep '\.zip\.001$' || true); do  # none: nothing to do (never a failure)
+            : > "release-zips/${first%.001}"
+          done
           ls -lah release-zips
 
       - name: Build render matrices
@@ -128,10 +136,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          ZIP: ${{ matrix.zip }}
         run: |
           mkdir -p package public out
-          gh release download "$RELEASE_TAG" --pattern "${{ matrix.zip }}" --dir package
-          unzip -o -q "package/${{ matrix.zip }}" -d public  # -o: the package's own files (e.g. its channel paper) replace the repo's copies; never prompt
+          if gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | grep -xF "$ZIP" > /dev/null; then
+            gh release download "$RELEASE_TAG" --pattern "$ZIP" --dir package
+          else
+            # uploaded in parts (over 1.9 GB): download them and join them back into the same ZIP, byte for byte
+            gh release download "$RELEASE_TAG" --pattern "$ZIP.*" --dir package
+            ls package/"$ZIP".[0-9][0-9][0-9] | sort | xargs cat > "package/$ZIP"
+            rm -f package/"$ZIP".[0-9][0-9][0-9]
+          fi
+          unzip -o -q "package/$ZIP" -d public  # -o: the package's own files (e.g. its channel paper) replace the repo's copies; never prompt
           echo "package: $(find public -type f | wc -l) files"  # a count only: this repository's logs are public
 
       - name: Detect renderer and chunk frame range
