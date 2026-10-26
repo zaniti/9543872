@@ -15,6 +15,7 @@ import {CoordinatesRef, DatelineRef, DocumentOverScene, LabelsOnPhotoRef, PhotoB
 import {CutoutScene, FlowMap, RegionsMap, StackedLines} from './RefKit3';
 import {BarsOnPaper, BetweenTwo, BigYearRef, DocumentQuote, FigureOnPaper, NumberedSteps, PercentRef, PortraitPrint, PrintsOnPaper, SentenceRef, ThenToday, type BarRow} from './RefKit2';
 import {EvidenceBoard, FreezeFrame, MapDive, PathTrace, Spotlight, Triptych, type PathPoint, type Spot} from './MotionPieces';
+import {PersonLabel} from './PersonLabel';
 
 export type Beat = ClaudeFuggerBeat & {revealShift?: number};
 const gridPaper = 'templates/clip6/paper-grid.jpg';
@@ -83,6 +84,9 @@ const BeatInner: React.FC<{beat: Beat}> = ({beat}) => {
     case 'T8': return <TwoPeopleRef first={a.src} second={b.src} firstAspect={a.aspectRatio} secondAspect={b.aspectRatio} firstPosition={a.objectPosition} secondPosition={b.objectPosition} nameA={s('nameA')} nameB={s('nameB')} revealShift={shift} />;
     case 'T11': return <SentenceRef keyAt={beat.data?.keyAt as (number | null)[] | undefined} background={a.src} position={bgPos} sentence={[s('firstLine'), s('emphasis') ? `*${s('emphasis')}*` : '', s('secondLine')].filter(Boolean).join(' ')} revealShift={shift} />;
     case 'T14': return <PercentRef background={a.src} position={bgPos} percent={Number(t.percent)} label={(s('label') || s('copy')).replace(/\*/g, '') || undefined} year={s('year') || undefined} revealShift={shift} />;
+    // T50: the person's name on the film at their belly, following them (data.track: worked out by the build)
+    case 'T50': return <PersonLabel background={a?.src} backgroundVideo={a?.videoParts?.[0]?.src} position={bgPos} track={beat.data?.track as number[][] | undefined}
+      name={s('name').toUpperCase()} role={s('role').toUpperCase()} roleBy="word" durationFrames={beat.durationFrames} revealShift={shift} />;
     case 'T16': return <PrintsOnPaper items={beat.assets.map((x) => ({src: x.src, aspect: x.aspectRatio, position: x.objectPosition}))} at={beat.data?.at as number[] | undefined} layout={beat.data?.layout as 'row' | 'portrait' | undefined} revealShift={shift} />;
     case 'T18': return <TwoPhotoHeading first={a.src} second={b.src} firstPosition={a.objectPosition} secondPosition={b.objectPosition} heading={s('heading')} firstLabel={s('labelA')} secondLabel={s('labelB')} revealShift={shift} />;
     case 'T22': return <StatementOverlay background={a.src} statement={s('statement')} backgroundPosition={bgPos} revealShift={shift} />;
