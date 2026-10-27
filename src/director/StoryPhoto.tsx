@@ -66,23 +66,45 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
   const right = side ? side === 'left' : (settledX ?? px) > FRAME_W / 2;
   const tagW = textWidth(text, 56, 600) + 56, tagH = 87; // the house tag: 56 px Poppins SemiBold in an 87 px box
   // aimed at a face: the tag sits up and to the side of the head, clear of it, so the arrow has room to curve onto it
-  const tx = Math.max(40, Math.min(FRAME_W - tagW - 40, face ? (right ? px - face.rx - 110 - tagW : px + face.rx + 110) : (right ? px - tagW - 170 : px + 170)));
+  const tx0 = Math.max(40, Math.min(FRAME_W - tagW - 40, face ? (right ? px - face.rx - 110 - tagW : px + face.rx + 110) : (right ? px - tagW - 170 : px + 170)));
   // above the point; when there is no room above (a point near the top of the frame), below it instead, never
   // squeezed against the edge
   // decided once, where the camera settles (the slow drift must never flip the tag from below to above mid-shot)
   const ref = settledY ?? py;
   const roomAbove = (face ? ref - face.ry - 150 : ref - 210) >= 40;
-  const ty = roomAbove ? Math.max(40, face ? py - face.ry - 150 : py - 210) : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
-  const ax = right ? tx + tagW : tx, ay = ty + tagH / 2; // where the arrow leaves the tag
-  const draw = interpolate(t, [4, 18], [0, 1], clamp);
-  let gx = px + (ax - px) * 0.12, gy = py + (ay - py) * 0.12; // stop just short of the point
-  if (face) {
-    // (px, py) is the face centre: stop on the face's outline, a small gap outside it, on the line toward the tag
-    const th = Math.atan2(ay - py, ax - px);
+  let tx = tx0;
+  let ty = roomAbove ? Math.max(40, face ? py - face.ry - 150 : py - 210) : Math.min(FRAME_H - tagH - 40, face ? py + face.ry + 70 : py + 130);
+  // where the arrow stops: just short of the point, or on a face's outline with a small gap, toward the tag's centre
+  const goal = (cx: number, cy: number): [number, number] => {
+    if (!face) return [px + (cx - px) * 0.12, py + (cy - py) * 0.12];
+    const th = Math.atan2(cy - py, cx - px);
     const r = (face.rx * face.ry) / Math.sqrt((face.ry * Math.cos(th)) ** 2 + (face.rx * Math.sin(th)) ** 2) + 6;
-    gx = px + r * Math.cos(th); gy = py + r * Math.sin(th);
+    return [px + r * Math.cos(th), py + r * Math.sin(th)];
+  };
+  // the arrow leaves the tag from the middle of whichever edge faces its target (left, right, top or bottom), not
+  // always from its side: a tag pushed below a big face points up from its top (the owner, 2026-10-27)
+  const leave = (x: number, y: number, g: [number, number]): [number, number] =>
+    ([[x, y + tagH / 2], [x + tagW, y + tagH / 2], [x + tagW / 2, y], [x + tagW / 2, y + tagH]] as [number, number][])
+      .reduce((a, b) => (Math.hypot(b[0] - g[0], b[1] - g[1]) < Math.hypot(a[0] - g[0], a[1] - g[1]) ? b : a));
+  let [gx, gy] = goal(tx + tagW / 2, ty + tagH / 2);
+  let [ax, ay] = leave(tx, ty, [gx, gy]);
+  // squeezed into a corner by a big face, the arrow shrank to a squiggle (Lindbergh, 2026-10-27): the tag steps back
+  const MIN_ARROW = 140;
+  const len0 = Math.hypot(ax - gx, ay - gy);
+  if (len0 < MIN_ARROW) {
+    const ux = (ax - gx) / Math.max(1, len0), uy = (ay - gy) / Math.max(1, len0);
+    tx = Math.max(40, Math.min(FRAME_W - tagW - 40, tx + ux * (MIN_ARROW - len0)));
+    ty = Math.max(40, Math.min(FRAME_H - tagH - 40, ty + uy * (MIN_ARROW - len0)));
+    [gx, gy] = goal(tx + tagW / 2, ty + tagH / 2);
+    [ax, ay] = leave(tx, ty, [gx, gy]);
   }
-  const mx = (ax + gx) / 2, my = Math.min(ay, gy) - 60; // a gentle curve
+  const draw = interpolate(t, [4, 18], [0, 1], clamp);
+  // a gentle curve: bowed upward, or, for a near-vertical arrow, toward the middle of the screen
+  const dx = gx - ax, dy = gy - ay, len = Math.max(1, Math.hypot(dx, dy));
+  let nx = -dy / len, ny = dx / len;
+  if (Math.abs(dx) < Math.abs(dy) * 0.5 ? nx * (FRAME_W / 2 - (ax + gx) / 2) < 0 : ny > 0) { nx = -nx; ny = -ny; }
+  const bow = Math.min(60, len * 0.25);
+  const mx = (ax + gx) / 2 + nx * bow, my = (ay + gy) / 2 + ny * bow;
   const ang = Math.atan2(gy - my, gx - mx);
   return <>
     <svg width={FRAME_W} height={FRAME_H} style={{position: 'absolute', inset: 0, opacity: o}}>
