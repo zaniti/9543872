@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
-import {CREAM, TagBox, clamp, textWidth} from './channelStyle';
+import {CREAM, TagBox, clamp, tagDone, textWidth} from './channelStyle';
 
 /**
  * T28 "story photo" (the owner's reference: a hook that tells one strong picture in several shots, 2026-10-21).
@@ -81,13 +81,20 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
     const r = (face.rx * face.ry) / Math.sqrt((face.ry * Math.cos(th)) ** 2 + (face.rx * Math.sin(th)) ** 2) + 6;
     return [px + r * Math.cos(th), py + r * Math.sin(th)];
   };
-  // the arrow leaves the tag from the middle of whichever edge faces its target (left, right, top or bottom), not
-  // always from its side: a tag pushed below a big face points up from its top (the owner, 2026-10-27)
-  const leave = (x: number, y: number, g: [number, number]): [number, number] =>
-    ([[x, y + tagH / 2], [x + tagW, y + tagH / 2], [x + tagW / 2, y], [x + tagW / 2, y + tagH]] as [number, number][])
-      .reduce((a, b) => (Math.hypot(b[0] - g[0], b[1] - g[1]) < Math.hypot(a[0] - g[0], a[1] - g[1]) ? b : a));
+  // the arrow leaves the tag from the point of its border nearest the face, anywhere along its four edges (kept off
+  // the rounded corners): under the tag it drops from the bottom edge right above the face (the owner, 2026-10-27)
+  const CORNER = 26;
+  const leave = (x: number, y: number, g: [number, number]): [number, number] => {
+    const lx = Math.min(x + tagW - CORNER, Math.max(x + CORNER, g[0]));
+    if (g[1] >= y && g[1] <= y + tagH) return [g[0] < x + tagW / 2 ? x : x + tagW, Math.min(y + tagH - 18, Math.max(y + 18, g[1]))];
+    const side = g[0] < x ? x : g[0] > x + tagW ? x + tagW : null;
+    // beside and below (or above) the tag: from the side edge when the face is far to the side, else the bottom/top
+    if (side !== null && Math.abs(g[0] - side) > Math.abs(g[1] - (g[1] < y ? y : y + tagH))) return [side, Math.min(y + tagH - 18, Math.max(y + 18, g[1]))];
+    return [lx, g[1] < y ? y : y + tagH];
+  };
   let [gx, gy] = goal(tx + tagW / 2, ty + tagH / 2);
   let [ax, ay] = leave(tx, ty, [gx, gy]);
+  [gx, gy] = goal(ax, ay); // aimed from where it really starts
   // squeezed into a corner by a big face, the arrow shrank to a squiggle (Lindbergh, 2026-10-27): the tag steps back
   const MIN_ARROW = 140;
   const len0 = Math.hypot(ax - gx, ay - gy);
@@ -97,8 +104,16 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
     ty = Math.max(40, Math.min(FRAME_H - tagH - 40, ty + uy * (MIN_ARROW - len0)));
     [gx, gy] = goal(tx + tagW / 2, ty + tagH / 2);
     [ax, ay] = leave(tx, ty, [gx, gy]);
+    [gx, gy] = goal(ax, ay);
   }
-  const draw = interpolate(t, [4, 18], [0, 1], clamp);
+  // the tag grows from the side nearer the arrow's start; the arrow starts once the box has reached that point, from
+  // a little inside the box (under it), so it comes out of the tag with no stub showing
+  const fromRight = ax > tx + tagW / 2;
+  const tt = textT ?? t;
+  const reach = ((fromRight ? tx + tagW - ax : ax - tx) / tagW) * tagDone(text, 0) + 2;
+  const draw = interpolate(tt, [Math.max(4, reach), Math.max(4, reach) + 14], [0, 1], clamp);
+  const inX = ax <= tx ? 16 : ax >= tx + tagW ? -16 : 0, inY = inX ? 0 : ay <= ty ? 16 : -16;
+  const sx0 = ax + inX, sy0 = ay + inY;
   // a gentle curve: bowed upward, or, for a near-vertical arrow, toward the middle of the screen
   const dx = gx - ax, dy = gy - ay, len = Math.max(1, Math.hypot(dx, dy));
   let nx = -dy / len, ny = dx / len;
@@ -108,12 +123,12 @@ export const PointerTag: React.FC<{px: number; py: number; text: string; t: numb
   const ang = Math.atan2(gy - my, gx - mx);
   return <>
     <svg width={FRAME_W} height={FRAME_H} style={{position: 'absolute', inset: 0, opacity: o}}>
-      <path d={`M ${ax} ${ay} Q ${mx} ${my} ${gx} ${gy}`} fill="none" stroke={CREAM} strokeWidth={5} strokeLinecap="round"
+      <path d={`M ${sx0} ${sy0} L ${ax} ${ay} Q ${mx} ${my} ${gx} ${gy}`} fill="none" stroke={CREAM} strokeWidth={5} strokeLinecap="round"
         pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))'}} />
       {draw >= 1 ? <path d={`M ${gx} ${gy} l ${-22 * Math.cos(ang - 0.45)} ${-22 * Math.sin(ang - 0.45)} M ${gx} ${gy} l ${-22 * Math.cos(ang + 0.45)} ${-22 * Math.sin(ang + 0.45)}`}
         stroke={CREAM} strokeWidth={5} strokeLinecap="round" fill="none" /> : null}
     </svg>
-    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={right ? 'right center' : 'left center'} t={textT ?? t} />
+    <RedTag text={text} left={tx} top={ty} show={show} opacity={o} origin={fromRight ? 'right center' : 'left center'} t={tt} />
   </>;
 };
 
