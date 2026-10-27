@@ -36,10 +36,11 @@ const SweepKeys: React.FC<{text: string; frame: number; start: number; base: str
     // 16 frames, the next one 8 frames later), so the last one is always done before the cut
     // on the narrator's word when the build knows it (data.keyAt), never before the text is in
     const s0 = Math.max(start + 8 * k, keyAt[k] ?? -Infinity); k++;
-    // a sweep the shot is too short to finish is skipped: the word stays plain, never cut half red (the owner,
-    // 2026-10-27, "THE WRONG MAN?" cut at "WRON")
-    if (s0 + 16 > end) return <span key={i}>{seg.text}</span>;
-    return <span key={i} style={sweep(interpolate(frame, [s0, s0 + 16], [0, 1], clamp), base)}>{seg.text}</span>;
+    // never cut half red (the owner, 2026-10-27, "THE WRONG MAN?" cut at "WRON"): near the cut the sweep plays faster
+    // so the word is fully red 4 frames before it; with under 8 frames to sweep it would only flash, so it is skipped
+    const run = Math.min(16, end - 4 - s0);
+    if (run < 8) return <span key={i}>{seg.text}</span>;
+    return <span key={i} style={sweep(interpolate(frame, [s0, s0 + run], [0, 1], clamp), base)}>{seg.text}</span>;
   })}</>;
 };
 
