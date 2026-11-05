@@ -4,6 +4,7 @@ import {BeatView, ENTER_FRAMES, Premount, type Beat} from './BeatView';
 import {ReviewSubtitles, type SubtitleCue} from './ReviewSubtitles';
 import {FONT_FILES, PaperGround, SharedBoard, applyTheme, setLanguage, type Theme, CREAM, RevealText, textBase, TagBox, textWidth} from './channelStyle';
 import {LookFilter} from './Look';
+import {CtaEndCard, CtaOverlay, type CtaEndProps, type CtaProps} from './CtaTemplates';
 
 /** One director job: written by engine/build_project.py to jobs/<id>/edit.json and passed in as props. */
 export type JobProps = {
@@ -26,6 +27,9 @@ export type JobProps = {
   /** Review player only (6 s): build each scene this many frames early (hidden) so its photo or film has loaded when it
    *  appears, instead of a black frame. Renders leave it at 0: they wait for every frame anyway. */
   premount?: number;
+  /** The book pack's call to action over the story, and the reminder card at the end (engine/cta.py); none without a pack. */
+  cta?: CtaProps | null;
+  ctaEnd?: CtaEndProps | null;
 };
 
 export const jobMetadata: CalculateMetadataFunction<JobProps> = ({props}) => ({durationInFrames: Math.max(1, props.totalFrames)});
@@ -163,7 +167,7 @@ const noAiTimes = (beats: Beat[]): number[] => {
   return out;
 };
 
-export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles, theme, language, premount = 0, noAiLook = 'source', noAiSize = 19, noAiSplit, noAiMark = 'check'}) => {
+export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles, theme, language, premount = 0, noAiLook = 'source', noAiSize = 19, noAiSplit, noAiMark = 'check', cta, ctaEnd}) => {
   // the channel font (Poppins) is loaded before the first frame is taken
   const [fontWait] = React.useState(() => delayRender('channel font'));
   React.useEffect(() => {
@@ -200,6 +204,9 @@ export const Job: React.FC<JobProps> = ({audio, beats, subtitles, showSubtitles,
         <BoardClear frames={beat.durationFrames} clear={!!onBoard[i + 1]}><BeatView beat={beat} noEnter /></BoardClear>
       </SharedBoard.Provider> : <BeatView beat={beat} />}
     </Sequence>)];
+    // the call to action and the end card, over the story (under the film look like every template)
+    if (cta) scenes.push(<Sequence key="cta" from={cta.start} durationInFrames={cta.end - cta.start} name="call to action" premountFor={premount}><CtaOverlay {...cta} /></Sequence>);
+    if (ctaEnd) scenes.push(<Sequence key="cta-end" from={ctaEnd.start} durationInFrames={ctaEnd.end - ctaEnd.start} name="end card" premountFor={premount}><CtaEndCard {...ctaEnd} /></Sequence>);
     // the channel's finishing look over every scene (text included); none when the channel has not set one
     // the label carries the film look too (RGB split, texture, grain), above the soft corners that would blur it
     const label = <>{noAiTimes(beats).map((t) => <NoAiLabel key={`no-ai-${t}`} language={language} from={t} look={noAiLook} size={noAiSize} mark={noAiMark} />)}</>;
